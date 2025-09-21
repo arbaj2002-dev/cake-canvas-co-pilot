@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Heart, Plus, Star } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Heart, Plus, Star, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface CakeCardProps {
@@ -29,7 +30,16 @@ const CakeCard = ({
 }: CakeCardProps) => {
   const [isLiked, setIsLiked] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
   const { toast } = useToast();
+
+  // Mock addons data
+  const mockAddons = [
+    { id: '1', name: 'Extra Chocolate Chips', price: 50, type: 'topping' },
+    { id: '2', name: 'Personalized Message', price: 100, type: 'message' },
+    { id: '3', name: 'Gift Wrapping', price: 75, type: 'service' },
+    { id: '4', name: 'Candles Set', price: 25, type: 'accessory' },
+  ];
 
   const handleLike = async () => {
     setIsLiked(!isLiked);
@@ -113,30 +123,143 @@ const CakeCard = ({
           )}
         </div>
 
-        {/* Price and Action */}
+        {/* Price and Actions */}
         <div className="flex items-center justify-between">
           <div>
             <span className="text-2xl font-bold text-primary">₹{basePrice}</span>
             <span className="text-sm text-muted-foreground ml-1">onwards</span>
           </div>
           
-          <Button 
-            size="sm"
-            disabled={isLoading}
-            onClick={handleAddToCart}
-            className="bg-gradient-button hover:scale-105 transition-bounce shadow-button"
-          >
-            {isLoading ? (
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-            ) : (
-              <>
-                <Plus className="h-4 w-4 mr-1" />
-                Add
-              </>
-            )}
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline"
+              size="sm"
+              onClick={() => setShowDetails(true)}
+              className="hover:scale-105 transition-bounce"
+            >
+              <Eye className="h-4 w-4 mr-1" />
+              Details
+            </Button>
+            
+            <Button 
+              size="sm"
+              disabled={isLoading}
+              onClick={handleAddToCart}
+              className="bg-gradient-button hover:scale-105 transition-bounce shadow-button"
+            >
+              {isLoading ? (
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+              ) : (
+                <>
+                  <Plus className="h-4 w-4 mr-1" />
+                  Add
+                </>
+              )}
+            </Button>
+          </div>
         </div>
       </div>
+
+      {/* Details Modal */}
+      <Dialog open={showDetails} onOpenChange={setShowDetails}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold text-primary">{name}</DialogTitle>
+          </DialogHeader>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Image */}
+            <div className="space-y-4">
+              <img 
+                src={imageUrl} 
+                alt={`${name} cake`}
+                className="w-full h-64 object-cover rounded-lg shadow-soft"
+              />
+              
+              {/* Rating and Category */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                  <span className="font-medium">{rating}</span>
+                  <span className="text-muted-foreground">({reviewCount} reviews)</span>
+                </div>
+                {category && (
+                  <Badge variant="secondary">{category}</Badge>
+                )}
+              </div>
+            </div>
+
+            {/* Details */}
+            <div className="space-y-4">
+              <div>
+                <h4 className="font-semibold text-lg mb-2">Description</h4>
+                <p className="text-muted-foreground">
+                  {description || "A delicious handcrafted cake made with the finest ingredients. Perfect for any celebration or special occasion."}
+                </p>
+              </div>
+
+              <div>
+                <h4 className="font-semibold text-lg mb-2">Base Price</h4>
+                <div className="text-3xl font-bold text-primary">₹{basePrice}</div>
+                <p className="text-sm text-muted-foreground">Starting price for 1 kg cake</p>
+              </div>
+
+              {/* Addons */}
+              <div>
+                <h4 className="font-semibold text-lg mb-3">Available Add-ons</h4>
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {mockAddons.map((addon) => (
+                    <div 
+                      key={addon.id}
+                      className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-smooth"
+                    >
+                      <div>
+                        <p className="font-medium">{addon.name}</p>
+                        <p className="text-xs text-muted-foreground capitalize">{addon.type}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-primary">₹{addon.price}</span>
+                        <Button size="sm" variant="outline">
+                          <Plus className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-2 pt-4">
+                <Button 
+                  variant="outline" 
+                  className="flex-1"
+                  onClick={handleLike}
+                >
+                  <Heart className={`h-4 w-4 mr-2 ${isLiked ? 'fill-current text-red-500' : ''}`} />
+                  {isLiked ? 'Liked' : 'Like'}
+                </Button>
+                <Button 
+                  className="flex-1 bg-gradient-button shadow-button"
+                  onClick={() => {
+                    handleAddToCart();
+                    setShowDetails(false);
+                  }}
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                  ) : (
+                    <>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add to Cart
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
