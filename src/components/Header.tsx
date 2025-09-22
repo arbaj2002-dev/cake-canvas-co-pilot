@@ -2,26 +2,47 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Heart, ShoppingCart, User, Menu, X } from "lucide-react";
+import { Heart, ShoppingCart, User, Menu, X, LogOut } from "lucide-react";
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger,
+  DropdownMenuSeparator
+} from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
+import { useAppSelector, useAppDispatch } from "@/store/hooks";
+import { logout } from "@/store/slices/authSlice";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [cartCount] = useState(0); // Will be connected to cart state later
-  const [isLoggedIn] = useState(false); // Will be connected to auth state later
   const navigate = useNavigate();
+  const dispatch = useAppDispatch();
   const { toast } = useToast();
+  
+  const { user, isAuthenticated } = useAppSelector(state => state.auth);
+  const cartItems = useAppSelector(state => state.cart.items);
+  const cartItemsCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
   const handleCartClick = () => {
     navigate("/cart");
   };
 
   const handleProfileClick = () => {
-    if (isLoggedIn) {
+    if (isAuthenticated) {
       navigate("/profile");
     } else {
       navigate("/auth");
     }
+  };
+
+  const handleLogout = () => {
+    dispatch(logout());
+    toast({
+      title: "Logged out successfully",
+      description: "You have been logged out of your account."
+    });
+    navigate("/");
   };
 
   return (
@@ -33,7 +54,7 @@ const Header = () => {
             <div className="w-10 h-10 rounded-full bg-gradient-button flex items-center justify-center shadow-button group-hover:scale-110 transition-bounce">
               <span className="text-white font-bold text-lg">🍰</span>
             </div>
-            <span className="hero-text text-xl">CakeShop</span>
+            <span className="hero-text text-xl">Sweet Delights</span>
           </Link>
 
           {/* Desktop Navigation */}
@@ -62,7 +83,7 @@ const Header = () => {
               variant="ghost"
               size="sm"
               className="text-muted-foreground hover:text-primary transition-smooth"
-              onClick={() => toast({ title: "Coming soon!", description: "Favorites feature will be available soon." })}
+              onClick={() => isAuthenticated ? navigate("/profile") : navigate("/auth")}
             >
               <Heart className="h-5 w-5" />
             </Button>
@@ -75,25 +96,46 @@ const Header = () => {
               onClick={handleCartClick}
             >
               <ShoppingCart className="h-5 w-5" />
-              {cartCount > 0 && (
+              {cartItemsCount > 0 && (
                 <Badge 
                   variant="destructive" 
                   className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs"
                 >
-                  {cartCount}
+                  {cartItemsCount}
                 </Badge>
               )}
             </Button>
 
             {/* Profile/Login */}
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-muted-foreground hover:text-primary transition-smooth"
-              onClick={handleProfileClick}
-            >
-              <User className="h-5 w-5" />
-            </Button>
+            {isAuthenticated && user ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="hover:text-primary">
+                    <User className="h-5 w-5 mr-2" />
+                    Hello, {user.name}!
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => navigate("/profile")}>
+                    Profile
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleLogout} className="text-red-600">
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Logout
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-muted-foreground hover:text-primary transition-smooth"
+                onClick={handleProfileClick}
+              >
+                <User className="h-5 w-5" />
+              </Button>
+            )}
 
             {/* Mobile Menu Toggle */}
             <Button

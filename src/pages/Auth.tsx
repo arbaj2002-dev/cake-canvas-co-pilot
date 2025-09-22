@@ -1,90 +1,67 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Separator } from "@/components/ui/separator";
-import { Eye, EyeOff, Mail, Phone, User, Lock } from "lucide-react";
+import { Eye, EyeOff, Cake } from "lucide-react";
+import Header from "@/components/Header";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
-import Header from "@/components/Header";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { loginSuccess } from "@/store/slices/authSlice";
 
 const Auth = () => {
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const dispatch = useAppDispatch();
+  const { isAuthenticated } = useAppSelector(state => state.auth);
+  
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate("/");
+    }
+  }, [isAuthenticated, navigate]);
 
   // Login form state
-  const [loginData, setLoginData] = useState({
+  const [loginForm, setLoginForm] = useState({
     phone: "",
     password: ""
   });
 
   // Register form state
-  const [registerData, setRegisterData] = useState({
+  const [registerForm, setRegisterForm] = useState({
     name: "",
     phone: "",
-    email: "",
     password: "",
     confirmPassword: ""
   });
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-
-    // Basic validation
-    if (!loginData.phone || !loginData.password) {
-      toast({
-        title: "Error",
-        description: "Please fill in all fields",
-        variant: "destructive"
-      });
-      setLoading(false);
-      return;
-    }
-
-    // Simulate API call
-    setTimeout(() => {
-      setLoading(false);
-      toast({
-        title: "Success!",
-        description: "Welcome back! You've been logged in successfully.",
-      });
-      navigate("/");
-    }, 1000);
+  const validatePhoneNumber = (phone: string) => {
+    return phone.length === 10 && /^\d+$/.test(phone);
   };
 
-  const handleRegister = async (e: React.FormEvent) => {
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-
-    // Basic validation
-    if (!registerData.name || !registerData.phone || !registerData.password) {
+    
+    // Validation
+    if (!loginForm.phone || !loginForm.password) {
       toast({
-        title: "Error",
-        description: "Please fill in all required fields",
+        title: "Please fill all fields",
         variant: "destructive"
       });
       setLoading(false);
       return;
     }
 
-    if (registerData.password !== registerData.confirmPassword) {
+    if (!validatePhoneNumber(loginForm.phone)) {
       toast({
-        title: "Error",
-        description: "Passwords do not match",
-        variant: "destructive"
-      });
-      setLoading(false);
-      return;
-    }
-
-    if (registerData.phone.replace(/\D/g, '').length !== 10) {
-      toast({
-        title: "Error",
+        title: "Invalid phone number",
         description: "Please enter a valid 10-digit phone number",
         variant: "destructive"
       });
@@ -92,266 +69,278 @@ const Auth = () => {
       return;
     }
 
-    // Simulate API call
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      // Mock API call - replace with actual backend integration
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Mock successful login
+      const mockUser = {
+        id: "1",
+        name: "John Doe",
+        phone: `+91${loginForm.phone}`
+      };
+      
+      const mockToken = "mock-jwt-token-" + Date.now();
+      
+      dispatch(loginSuccess({ user: mockUser, token: mockToken }));
+      
       toast({
-        title: "Account Created!",
-        description: "Your account has been created successfully. Welcome to CakeShop!",
+        title: "Login successful!",
+        description: "Welcome back to Sweet Delights!"
       });
       navigate("/");
-    }, 1000);
+    } catch (error) {
+      toast({
+        title: "Login failed",
+        description: "Invalid credentials. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleGoogleAuth = () => {
-    toast({
-      title: "Coming Soon!",
-      description: "Google OAuth will be available soon.",
-    });
+  const handleRegisterSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    
+    // Validation
+    if (!registerForm.name || !registerForm.phone || !registerForm.password || !registerForm.confirmPassword) {
+      toast({
+        title: "Please fill all fields",
+        variant: "destructive"
+      });
+      setLoading(false);
+      return;
+    }
+
+    if (!validatePhoneNumber(registerForm.phone)) {
+      toast({
+        title: "Invalid phone number",
+        description: "Please enter a valid 10-digit phone number",
+        variant: "destructive"
+      });
+      setLoading(false);
+      return;
+    }
+
+    if (registerForm.password !== registerForm.confirmPassword) {
+      toast({
+        title: "Passwords don't match",
+        variant: "destructive"
+      });
+      setLoading(false);
+      return;
+    }
+
+    if (registerForm.password.length < 6) {
+      toast({
+        title: "Password too short",
+        description: "Password must be at least 6 characters long",
+        variant: "destructive"
+      });
+      setLoading(false);
+      return;
+    }
+
+    try {
+      // Mock API call - replace with actual backend integration
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Mock successful registration and auto-login
+      const mockUser = {
+        id: "1",
+        name: registerForm.name,
+        phone: `+91${registerForm.phone}`
+      };
+      
+      const mockToken = "mock-jwt-token-" + Date.now();
+      
+      dispatch(loginSuccess({ user: mockUser, token: mockToken }));
+      
+      toast({
+        title: "Registration successful!",
+        description: "Welcome to Sweet Delights!"
+      });
+      navigate("/");
+    } catch (error) {
+      toast({
+        title: "Registration failed",
+        description: "Something went wrong. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="min-h-screen bg-gradient-hero">
       <Header />
       
-      <div className="container mx-auto px-4 py-12">
+      <div className="container mx-auto px-4 py-8">
         <div className="max-w-md mx-auto">
           <div className="text-center mb-8">
-            <h1 className="hero-text text-3xl mb-2">Welcome to CakeShop</h1>
-            <p className="text-muted-foreground">Login or create an account to get started</p>
+            <div className="w-16 h-16 bg-gradient-primary rounded-full flex items-center justify-center mx-auto mb-4">
+              <Cake className="h-8 w-8 text-white" />
+            </div>
+            <h1 className="hero-text text-3xl mb-2">Welcome to Sweet Delights</h1>
+            <p className="text-muted-foreground">Join our community of cake lovers</p>
           </div>
 
-          <Card className="shadow-card border-0 bg-card/80 backdrop-blur-sm">
-            <Tabs defaultValue="login" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 mb-6">
-                <TabsTrigger value="login">Login</TabsTrigger>
-                <TabsTrigger value="register">Register</TabsTrigger>
-              </TabsList>
-
-              {/* Login Tab */}
-              <TabsContent value="login">
-                <CardHeader className="text-center pb-4">
-                  <CardTitle className="text-2xl">Login</CardTitle>
-                  <CardDescription>
-                    Enter your credentials to access your account
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <form onSubmit={handleLogin} className="space-y-4">
+          <Card className="bg-card/80 backdrop-blur-sm shadow-card">
+            <CardContent className="p-6">
+              <Tabs defaultValue="login" className="w-full">
+                <TabsList className="grid w-full grid-cols-2 mb-6">
+                  <TabsTrigger value="login">Login</TabsTrigger>
+                  <TabsTrigger value="register">Register</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="login">
+                  <form onSubmit={handleLoginSubmit} className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="login-phone">Phone Number</Label>
-                      <div className="relative">
-                        <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                      <div className="flex">
+                        <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-input bg-muted text-muted-foreground text-sm">
+                          +91
+                        </span>
                         <Input
                           id="login-phone"
                           type="tel"
-                          placeholder="+91 98765 43210"
-                          value={loginData.phone}
-                          onChange={(e) => setLoginData({...loginData, phone: e.target.value})}
-                          className="pl-10"
-                          required
+                          placeholder="Enter your phone number"
+                          value={loginForm.phone}
+                          onChange={(e) => setLoginForm({ ...loginForm, phone: e.target.value.replace(/\D/g, '').slice(0, 10) })}
+                          className="rounded-l-none"
+                          maxLength={10}
                         />
                       </div>
                     </div>
-
+                    
                     <div className="space-y-2">
                       <Label htmlFor="login-password">Password</Label>
                       <div className="relative">
-                        <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                         <Input
                           id="login-password"
                           type={showPassword ? "text" : "password"}
                           placeholder="Enter your password"
-                          value={loginData.password}
-                          onChange={(e) => setLoginData({...loginData, password: e.target.value})}
-                          className="pl-10 pr-10"
-                          required
+                          value={loginForm.password}
+                          onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
                         />
                         <Button
                           type="button"
                           variant="ghost"
                           size="sm"
-                          className="absolute right-2 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0"
+                          className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                           onClick={() => setShowPassword(!showPassword)}
                         >
                           {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         </Button>
                       </div>
                     </div>
-
+                    
                     <Button 
                       type="submit" 
-                      className="w-full bg-gradient-button hover:scale-105 transition-bounce shadow-button"
+                      className="w-full bg-gradient-button shadow-button"
                       disabled={loading}
                     >
-                      {loading ? (
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-                      ) : (
-                        "Login"
-                      )}
-                    </Button>
-
-                    <div className="relative">
-                      <Separator className="my-4" />
-                      <span className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-card px-2 text-sm text-muted-foreground">
-                        or
-                      </span>
-                    </div>
-
-                    <Button 
-                      type="button"
-                      variant="outline"
-                      className="w-full"
-                      onClick={handleGoogleAuth}
-                    >
-                      <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
-                        <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                        <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                        <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                        <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                      </svg>
-                      Continue with Google
+                      {loading ? "Signing in..." : "Login"}
                     </Button>
                   </form>
-                </CardContent>
-              </TabsContent>
-
-              {/* Register Tab */}
-              <TabsContent value="register">
-                <CardHeader className="text-center pb-4">
-                  <CardTitle className="text-2xl">Create Account</CardTitle>
-                  <CardDescription>
-                    Join CakeShop and start ordering delicious cakes
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <form onSubmit={handleRegister} className="space-y-4">
+                </TabsContent>
+                
+                <TabsContent value="register">
+                  <form onSubmit={handleRegisterSubmit} className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="register-name">Full Name *</Label>
-                      <div className="relative">
-                        <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                        <Input
-                          id="register-name"
-                          type="text"
-                          placeholder="Enter your full name"
-                          value={registerData.name}
-                          onChange={(e) => setRegisterData({...registerData, name: e.target.value})}
-                          className="pl-10"
-                          required
-                        />
-                      </div>
+                      <Label htmlFor="register-name">Full Name</Label>
+                      <Input
+                        id="register-name"
+                        type="text"
+                        placeholder="Enter your full name"
+                        value={registerForm.name}
+                        onChange={(e) => setRegisterForm({ ...registerForm, name: e.target.value })}
+                      />
                     </div>
-
+                    
                     <div className="space-y-2">
-                      <Label htmlFor="register-phone">Phone Number *</Label>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground text-sm">+91</span>
+                      <Label htmlFor="register-phone">Phone Number</Label>
+                      <div className="flex">
+                        <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-input bg-muted text-muted-foreground text-sm">
+                          +91
+                        </span>
                         <Input
                           id="register-phone"
                           type="tel"
-                          placeholder="98765 43210"
-                          value={registerData.phone}
-                          onChange={(e) => setRegisterData({...registerData, phone: e.target.value})}
-                          className="pl-12"
-                          required
+                          placeholder="Enter your phone number"
+                          value={registerForm.phone}
+                          onChange={(e) => setRegisterForm({ ...registerForm, phone: e.target.value.replace(/\D/g, '').slice(0, 10) })}
+                          className="rounded-l-none"
+                          maxLength={10}
                         />
                       </div>
                     </div>
-
+                    
                     <div className="space-y-2">
-                      <Label htmlFor="register-email">Email (Optional)</Label>
+                      <Label htmlFor="register-password">Password</Label>
                       <div className="relative">
-                        <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                        <Input
-                          id="register-email"
-                          type="email"
-                          placeholder="your@email.com"
-                          value={registerData.email}
-                          onChange={(e) => setRegisterData({...registerData, email: e.target.value})}
-                          className="pl-10"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="register-password">Password *</Label>
-                      <div className="relative">
-                        <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                         <Input
                           id="register-password"
                           type={showPassword ? "text" : "password"}
-                          placeholder="Create a strong password"
-                          value={registerData.password}
-                          onChange={(e) => setRegisterData({...registerData, password: e.target.value})}
-                          className="pl-10 pr-10"
-                          required
+                          placeholder="Create a password (min. 6 characters)"
+                          value={registerForm.password}
+                          onChange={(e) => setRegisterForm({ ...registerForm, password: e.target.value })}
                         />
                         <Button
                           type="button"
                           variant="ghost"
                           size="sm"
-                          className="absolute right-2 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0"
+                          className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                           onClick={() => setShowPassword(!showPassword)}
                         >
                           {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         </Button>
                       </div>
                     </div>
-
+                    
                     <div className="space-y-2">
-                      <Label htmlFor="register-confirm-password">Confirm Password *</Label>
+                      <Label htmlFor="register-confirm-password">Confirm Password</Label>
                       <div className="relative">
-                        <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                         <Input
                           id="register-confirm-password"
-                          type="password"
+                          type={showConfirmPassword ? "text" : "password"}
                           placeholder="Confirm your password"
-                          value={registerData.confirmPassword}
-                          onChange={(e) => setRegisterData({...registerData, confirmPassword: e.target.value})}
-                          className="pl-10"
-                          required
+                          value={registerForm.confirmPassword}
+                          onChange={(e) => setRegisterForm({ ...registerForm, confirmPassword: e.target.value })}
                         />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        >
+                          {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </Button>
                       </div>
                     </div>
-
+                    
                     <Button 
                       type="submit" 
-                      className="w-full bg-gradient-button hover:scale-105 transition-bounce shadow-button"
+                      className="w-full bg-gradient-button shadow-button"
                       disabled={loading}
                     >
-                      {loading ? (
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-                      ) : (
-                        "Create Account"
-                      )}
-                    </Button>
-
-                    <div className="relative">
-                      <Separator className="my-4" />
-                      <span className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-card px-2 text-sm text-muted-foreground">
-                        or
-                      </span>
-                    </div>
-
-                    <Button 
-                      type="button"
-                      variant="outline"
-                      className="w-full"
-                      onClick={handleGoogleAuth}
-                    >
-                      <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
-                        <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                        <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                        <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                        <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                      </svg>
-                      Sign up with Google
+                      {loading ? "Creating account..." : "Register"}
                     </Button>
                   </form>
-                </CardContent>
-              </TabsContent>
-            </Tabs>
+                </TabsContent>
+              </Tabs>
+            </CardContent>
           </Card>
+
+          <div className="text-center mt-6">
+            <p className="text-sm text-muted-foreground">
+              By continuing, you agree to our Terms of Service and Privacy Policy
+            </p>
+          </div>
         </div>
       </div>
     </div>
