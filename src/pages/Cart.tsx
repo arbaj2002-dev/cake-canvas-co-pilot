@@ -8,73 +8,43 @@ import { Minus, Plus, Trash2, ShoppingCart, Tag, Gift } from "lucide-react";
 import Header from "@/components/Header";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import { useAppSelector, useAppDispatch } from "@/store/hooks";
+import { removeFromCart, updateCartItemQuantity, updateCartItemAddons } from "@/store/slices/cartSlice";
 
 const Cart = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const dispatch = useAppDispatch();
+  const cartItems = useAppSelector((state) => state.cart.items);
   const [couponCode, setCouponCode] = useState("");
   const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null);
   const [discount, setDiscount] = useState(0);
 
-  const [cartItems, setCartItems] = useState([
-    {
-      id: 1,
-      name: "Chocolate Birthday Delight",
-      basePrice: 899,
-      quantity: 1,
-      size: "1 kg",
-      customMessage: "Happy Birthday!",
-      addons: [
-        { id: 1, name: "Extra Chocolate Chips", price: 50, quantity: 1 },
-        { id: 2, name: "Candles Set", price: 25, quantity: 1 }
-      ]
-    },
-    {
-      id: 2,
-      name: "Rainbow Layer Cake",
-      basePrice: 1299,
-      quantity: 1,
-      size: "1.5 kg",
-      customMessage: "",
-      addons: [
-        { id: 3, name: "Gift Wrapping", price: 75, quantity: 1 }
-      ]
-    }
-  ]);
-
-  const updateQuantity = (itemId: number, newQuantity: number) => {
+  const updateQuantity = (itemId: string, newQuantity: number) => {
     if (newQuantity < 1) return;
-    setCartItems(items => 
-      items.map(item => 
-        item.id === itemId ? { ...item, quantity: newQuantity } : item
-      )
-    );
+    dispatch(updateCartItemQuantity({ id: itemId, quantity: newQuantity }));
   };
 
-  const removeItem = (itemId: number) => {
-    setCartItems(items => items.filter(item => item.id !== itemId));
+  const removeItem = (itemId: string) => {
+    dispatch(removeFromCart(itemId));
     toast({
       title: "Item Removed",
       description: "Item has been removed from your cart"
     });
   };
 
-  const updateAddonQuantity = (itemId: number, addonId: number, newQuantity: number) => {
+  const updateAddonQuantity = (itemId: string, addonId: string, newQuantity: number) => {
     if (newQuantity < 0) return;
-    setCartItems(items =>
-      items.map(item =>
-        item.id === itemId
-          ? {
-              ...item,
-              addons: newQuantity === 0 
-                ? item.addons.filter(addon => addon.id !== addonId)
-                : item.addons.map(addon =>
-                    addon.id === addonId ? { ...addon, quantity: newQuantity } : addon
-                  )
-            }
-          : item
-      )
-    );
+    const item = cartItems.find(item => item.id === itemId);
+    if (!item) return;
+    
+    const updatedAddons = newQuantity === 0 
+      ? item.addons.filter(addon => addon.id !== addonId)
+      : item.addons.map(addon =>
+          addon.id === addonId ? { ...addon, quantity: newQuantity } : addon
+        );
+    
+    dispatch(updateCartItemAddons({ id: itemId, addons: updatedAddons }));
   };
 
   const applyCoupon = () => {
