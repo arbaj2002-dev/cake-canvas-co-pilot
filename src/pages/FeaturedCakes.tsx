@@ -6,9 +6,6 @@ import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 
 // Import our generated images
-import weddingCake from "@/assets/wedding-cake.jpg";
-import rainbowCake from "@/assets/rainbow-cake.jpg";
-import chocolateCake from "@/assets/chocolate-cake.jpg";
 import heroCake from "@/assets/hero-cake.jpg";
 
 interface Product {
@@ -27,36 +24,6 @@ const FeaturedCakes = () => {
   const [featuredCakes, setFeaturedCakes] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Mock featured cakes with our generated images
-  const mockFeaturedCakes: Product[] = [
-    {
-      id: "1",
-      name: "Chocolate Birthday Delight",
-      description: "Rich chocolate cake perfect for birthday celebrations",
-      base_price: 899,
-      image_url: heroCake,
-      is_featured: true,
-      categories: { name: "Birthday" }
-    },
-    {
-      id: "2", 
-      name: "Elegant Wedding Cake",
-      description: "Three-tier vanilla wedding cake with rose decorations",
-      base_price: 2499,
-      image_url: weddingCake,
-      is_featured: true,
-      categories: { name: "Wedding" }
-    },
-    {
-      id: "3",
-      name: "Rainbow Layer Cake",
-      description: "Colorful rainbow layers that bring joy to any celebration",
-      base_price: 1299,
-      image_url: rainbowCake,
-      is_featured: true,
-      categories: { name: "Special" }
-    }
-  ];
 
   useEffect(() => {
     fetchFeaturedCakes();
@@ -83,15 +50,13 @@ const FeaturedCakes = () => {
 
       if (error) {
         console.error('Error fetching featured cakes:', error);
-        setFeaturedCakes(mockFeaturedCakes);
-      } else if (data && data.length > 0) {
-        setFeaturedCakes(data);
+        setFeaturedCakes([]);
       } else {
-        setFeaturedCakes(mockFeaturedCakes);
+        setFeaturedCakes(data || []);
       }
     } catch (error) {
       console.error('Error:', error);
-      setFeaturedCakes(mockFeaturedCakes);
+      setFeaturedCakes([]);
     } finally {
       setLoading(false);
     }
@@ -103,6 +68,21 @@ const FeaturedCakes = () => {
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-center h-32">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  if (featuredCakes.length === 0) {
+    return (
+      <section className="py-16 bg-card/20">
+        <div className="container mx-auto px-4">
+          <div className="text-center">
+            <h2 className="hero-text text-3xl md:text-4xl mb-4">Featured Cakes</h2>
+            <p className="text-lg text-muted-foreground">
+              No featured cakes available at the moment. Check back soon!
+            </p>
           </div>
         </div>
       </section>
