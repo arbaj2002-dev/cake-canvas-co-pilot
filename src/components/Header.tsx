@@ -13,6 +13,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useAppSelector, useAppDispatch } from "@/store/hooks";
 import { logout } from "@/store/slices/authSlice";
+import { supabase } from "@/integrations/supabase/client";
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -36,13 +37,22 @@ const Header = () => {
     }
   };
 
-  const handleLogout = () => {
-    dispatch(logout());
-    toast({
-      title: "Logged out successfully",
-      description: "You have been logged out of your account."
-    });
-    navigate("/");
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      dispatch(logout());
+      toast({
+        title: "Logged out successfully",
+        description: "You have been logged out of your account."
+      });
+      navigate("/");
+    } catch (error) {
+      toast({
+        title: "Error logging out",
+        description: "Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   return (

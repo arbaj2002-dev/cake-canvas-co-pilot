@@ -9,7 +9,8 @@ import Header from "@/components/Header";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { loginSuccess } from "@/store/slices/authSlice";
+import { setSession } from "@/store/slices/authSlice";
+import { supabase } from "@/integrations/supabase/client";
 
 const Auth = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -29,20 +30,20 @@ const Auth = () => {
 
   // Login form state
   const [loginForm, setLoginForm] = useState({
-    phone: "",
+    email: "",
     password: ""
   });
 
   // Register form state
   const [registerForm, setRegisterForm] = useState({
     name: "",
-    phone: "",
+    email: "",
     password: "",
     confirmPassword: ""
   });
 
-  const validatePhoneNumber = (phone: string) => {
-    return phone.length === 10 && /^\d+$/.test(phone);
+  const validateEmail = (email: string) => {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   };
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
@@ -50,7 +51,7 @@ const Auth = () => {
     setLoading(true);
     
     // Validation
-    if (!loginForm.phone || !loginForm.password) {
+    if (!loginForm.email || !loginForm.password) {
       toast({
         title: "Please fill all fields",
         variant: "destructive"
@@ -59,10 +60,10 @@ const Auth = () => {
       return;
     }
 
-    if (!validatePhoneNumber(loginForm.phone)) {
+    if (!validateEmail(loginForm.email)) {
       toast({
-        title: "Invalid phone number",
-        description: "Please enter a valid 10-digit phone number",
+        title: "Invalid email",
+        description: "Please enter a valid email address",
         variant: "destructive"
       });
       setLoading(false);
@@ -70,29 +71,47 @@ const Auth = () => {
     }
 
     try {
-      // Mock API call - replace with actual backend integration
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Mock successful login
-      const mockUser = {
-        id: "1",
-        name: "John Doe",
-        phone: `+91${loginForm.phone}`
-      };
-      
-      const mockToken = "mock-jwt-token-" + Date.now();
-      
-      dispatch(loginSuccess({ user: mockUser, token: mockToken }));
-      
-      toast({
-        title: "Login successful!",
-        description: "Welcome back to Sweet Delights!"
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: loginForm.email,
+        password: loginForm.password,
       });
-      navigate("/");
+
+      if (error) {
+        toast({
+          title: "Login failed",
+          description: error.message,
+          variant: "destructive"
+        });
+        return;
+      }
+
+      if (data.user && data.session) {
+        // Fetch user profile
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('user_id', data.user.id)
+          .single();
+
+        const userData = {
+          id: data.user.id,
+          name: profile?.full_name || '',
+          email: data.user.email || '',
+          phone: profile?.phone || ''
+        };
+
+        dispatch(setSession({ session: data.session, user: userData }));
+        
+        toast({
+          title: "Login successful!",
+          description: "Welcome back to Sweet Delights!"
+        });
+        navigate("/");
+      }
     } catch (error) {
       toast({
         title: "Login failed",
-        description: "Invalid credentials. Please try again.",
+        description: "Something went wrong. Please try again.",
         variant: "destructive"
       });
     } finally {
@@ -105,7 +124,7 @@ const Auth = () => {
     setLoading(true);
     
     // Validation
-    if (!registerForm.name || !registerForm.phone || !registerForm.password || !registerForm.confirmPassword) {
+    if (!registerForm.name || !registerForm.email || !registerForm.password || !registerForm.confirmPassword) {
       toast({
         title: "Please fill all fields",
         variant: "destructive"
@@ -114,10 +133,10 @@ const Auth = () => {
       return;
     }
 
-    if (!validatePhoneNumber(registerForm.phone)) {
+    if (!validateEmail(registerForm.email)) {
       toast({
-        title: "Invalid phone number",
-        description: "Please enter a valid 10-digit phone number",
+        title: "Invalid email",
+        description: "Please enter a valid email address",
         variant: "destructive"
       });
       setLoading(false);
@@ -144,25 +163,49 @@ const Auth = () => {
     }
 
     try {
-      // Mock API call - replace with actual backend integration
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const redirectUrl = `${window.location.origin}/`;
       
-      // Mock successful registration and auto-login
-      const mockUser = {
-        id: "1",
-        name: registerForm.name,
-        phone: `+91${registerForm.phone}`
-      };
-      
-      const mockToken = "mock-jwt-token-" + Date.now();
-      
-      dispatch(loginSuccess({ user: mockUser, token: mockToken }));
-      
-      toast({
-        title: "Registration successful!",
-        description: "Welcome to Sweet Delights!"
+      const { data, error } = await supabase.auth.signUp({
+        email: registerForm.email,
+        password: registerForm.password,
+        options: {
+          emailRedirectTo: redirectUrl,
+          data: {
+            full_name: registerForm.name,
+          }
+        }
       });
-      navigate("/");
+
+      if (error) {
+        toast({
+          title: "Registration failed",
+          description: error.message,
+          variant: "destructive"
+        });
+        return;
+      }
+
+      if (data.user && data.session) {
+        const userData = {
+          id: data.user.id,
+          name: registerForm.name,
+          email: data.user.email || '',
+          phone: ''
+        };
+
+        dispatch(setSession({ session: data.session, user: userData }));
+        
+        toast({
+          title: "Registration successful!",
+          description: "Welcome to Sweet Delights!"
+        });
+        navigate("/");
+      } else {
+        toast({
+          title: "Registration successful!",
+          description: "Please check your email to verify your account.",
+        });
+      }
     } catch (error) {
       toast({
         title: "Registration failed",
@@ -199,21 +242,14 @@ const Auth = () => {
                 <TabsContent value="login">
                   <form onSubmit={handleLoginSubmit} className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="login-phone">Phone Number</Label>
-                      <div className="flex">
-                        <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-input bg-muted text-muted-foreground text-sm">
-                          +91
-                        </span>
-                        <Input
-                          id="login-phone"
-                          type="tel"
-                          placeholder="Enter your phone number"
-                          value={loginForm.phone}
-                          onChange={(e) => setLoginForm({ ...loginForm, phone: e.target.value.replace(/\D/g, '').slice(0, 10) })}
-                          className="rounded-l-none"
-                          maxLength={10}
-                        />
-                      </div>
+                      <Label htmlFor="login-email">Email</Label>
+                      <Input
+                        id="login-email"
+                        type="email"
+                        placeholder="Enter your email"
+                        value={loginForm.email}
+                        onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })}
+                      />
                     </div>
                     
                     <div className="space-y-2">
@@ -262,21 +298,14 @@ const Auth = () => {
                     </div>
                     
                     <div className="space-y-2">
-                      <Label htmlFor="register-phone">Phone Number</Label>
-                      <div className="flex">
-                        <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-input bg-muted text-muted-foreground text-sm">
-                          +91
-                        </span>
-                        <Input
-                          id="register-phone"
-                          type="tel"
-                          placeholder="Enter your phone number"
-                          value={registerForm.phone}
-                          onChange={(e) => setRegisterForm({ ...registerForm, phone: e.target.value.replace(/\D/g, '').slice(0, 10) })}
-                          className="rounded-l-none"
-                          maxLength={10}
-                        />
-                      </div>
+                      <Label htmlFor="register-email">Email</Label>
+                      <Input
+                        id="register-email"
+                        type="email"
+                        placeholder="Enter your email"
+                        value={registerForm.email}
+                        onChange={(e) => setRegisterForm({ ...registerForm, email: e.target.value })}
+                      />
                     </div>
                     
                     <div className="space-y-2">
