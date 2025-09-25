@@ -106,7 +106,7 @@ const Auth = () => {
           title: "Login successful!",
           description: "Welcome back to Sweet Delights!"
         });
-        navigate("/");
+        navigate("/cakes");
       }
     } catch (error) {
       toast({
@@ -199,7 +199,7 @@ const Auth = () => {
           title: "Registration successful!",
           description: "Welcome to Sweet Delights!"
         });
-        navigate("/");
+        navigate("/cakes");
       } else {
         toast({
           title: "Registration successful!",
