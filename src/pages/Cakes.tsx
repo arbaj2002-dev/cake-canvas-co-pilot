@@ -234,20 +234,25 @@ const Cakes = () => {
           </div>
         </div>
 
-        {/* Cakes Grid */}
+        {/* Cakes Display */}
         {sortedCakes.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <div className={
+            viewMode === "grid" 
+              ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+              : "flex flex-col gap-4"
+          }>
             {sortedCakes.map((cake, index) => (
-              <CakeCard
-                key={cake.id}
-                id={cake.id}
-                name={cake.name}
-                description={cake.description || undefined}
-                basePrice={cake.base_price}
-                imageUrl={getImageUrl(cake, index)}
-                category={cake.categories?.name}
-                isFeature={cake.is_featured || false}
-              />
+              <div key={cake.id} className={viewMode === "list" ? "w-full" : ""}>
+                <CakeCard
+                  id={cake.id}
+                  name={cake.name}
+                  description={cake.description || undefined}
+                  basePrice={cake.base_price}
+                  imageUrl={getImageUrl(cake, index)}
+                  category={cake.categories?.name}
+                  isFeature={cake.is_featured || false}
+                />
+              </div>
             ))}
           </div>
         ) : (
