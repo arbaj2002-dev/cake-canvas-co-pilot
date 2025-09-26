@@ -77,11 +77,28 @@ const Auth = () => {
       });
 
       if (error) {
-        toast({
-          title: "Login failed",
-          description: error.message,
-          variant: "destructive"
-        });
+        console.error('Login error:', error);
+        
+        // Handle specific error cases
+        if (error.message.includes('Invalid login credentials')) {
+          toast({
+            title: "Login failed",
+            description: "Invalid email or password. If you just registered, please check your email and confirm your account first.",
+            variant: "destructive"
+          });
+        } else if (error.message.includes('Email not confirmed')) {
+          toast({
+            title: "Email not confirmed",
+            description: "Please check your email and click the confirmation link before signing in.",
+            variant: "destructive"
+          });
+        } else {
+          toast({
+            title: "Login failed",
+            description: error.message,
+            variant: "destructive"
+          });
+        }
         return;
       }
 
@@ -109,6 +126,7 @@ const Auth = () => {
         navigate("/cakes");
       }
     } catch (error) {
+      console.error('Login error:', error);
       toast({
         title: "Login failed",
         description: "Something went wrong. Please try again.",
@@ -203,7 +221,7 @@ const Auth = () => {
       } else {
         toast({
           title: "Registration successful!",
-          description: "Please check your email to verify your account.",
+          description: "Please check your email and click the confirmation link to complete your registration.",
         });
       }
     } catch (error) {
