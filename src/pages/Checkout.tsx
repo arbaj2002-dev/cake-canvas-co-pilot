@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,6 +11,7 @@ import { MapPin, CreditCard, Truck, Calendar, Clock, Plus, Edit2 } from "lucide-
 import Header from "@/components/Header";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 
 const Checkout = () => {
   const { toast } = useToast();
@@ -54,29 +55,139 @@ const Checkout = () => {
     landmark: ""
   });
 
-  // Mock cart data (in real app, this would come from state/context)
-  const orderSummary = {
-    items: [
-      { name: "Chocolate Birthday Delight", quantity: 1, price: 899 },
-      { name: "Rainbow Layer Cake", quantity: 1, price: 1299 }
-    ],
-    subtotal: 2198,
-    discount: 439.6, // 20% discount
-    total: 1758.4
-  };
+  // Get cart data from localStorage
+  const [orderSummary, setOrderSummary] = useState({
+    items: [],
+    subtotal: 0,
+    discount: 0,
+    discountAmount: 0,
+    total: 0,
+    appliedCoupon: null
+  });
 
-  const handlePlaceOrder = () => {
+  useEffect(() => {
+    // Load checkout data from localStorage
+    const checkoutData = localStorage.getItem('checkout_data');
+    if (checkoutData) {
+      const data = JSON.parse(checkoutData);
+      setOrderSummary({
+        items: data.items || [],
+        subtotal: data.subtotal || 0,
+        discount: data.discount || 0,
+        discountAmount: data.discountAmount || 0,
+        total: data.total || 0,
+        appliedCoupon: data.appliedCoupon || null
+      });
+    } else {
+      // Redirect to cart if no data
+      navigate('/cart');
+    }
+  }, [navigate]);
+
+  const handlePlaceOrder = async () => {
     setIsProcessing(true);
     
-    setTimeout(() => {
+    try {
+      // Create customer first
+      const { data: customer, error: customerError } = await supabase
+        .from('customers')
+        .insert({
+          name: customerDetails.name,
+          phone: customerDetails.phone,
+          email: customerDetails.email,
+          address: selectedAddress === 'new' 
+            ? `${newAddress.street}, ${newAddress.city}, ${newAddress.pincode}` 
+            : savedAddresses.find(addr => addr.id === selectedAddress)?.address
+        })
+        .select()
+        .single();
+
+      if (customerError) {
+        console.error('Error creating customer:', customerError);
+        throw customerError;
+      }
+
+      // Store customer phone for future coupon validation
+      localStorage.setItem('customer_phone', customerDetails.phone);
+
+      // Create order
+      const { data: order, error: orderError } = await supabase
+        .from('orders')
+        .insert({
+          customer_id: customer.id,
+          total_amount: orderSummary.total,
+          payment_method: paymentMethod,
+          payment_status: paymentMethod === 'cod' ? 'pending' : 'completed',
+          delivery_name: customerDetails.name,
+          delivery_phone: customerDetails.phone,
+          delivery_address: selectedAddress === 'new' 
+            ? `${newAddress.street}, ${newAddress.city}, ${newAddress.pincode}`
+            : savedAddresses.find(addr => addr.id === selectedAddress)?.address,
+          order_notes: deliveryInfo.instructions
+        })
+        .select()
+        .single();
+
+      if (orderError) {
+        console.error('Error creating order:', orderError);
+        throw orderError;
+      }
+
+      // Create order items
+      for (const item of orderSummary.items) {
+        const { error: itemError } = await supabase
+          .from('order_items')
+          .insert({
+            order_id: order.id,
+            product_id: item.id,
+            quantity: item.quantity,
+            unit_price: item.basePrice,
+            custom_message: item.customMessage
+          });
+
+        if (itemError) {
+          console.error('Error creating order item:', itemError);
+        }
+
+        // Create order addons if any
+        if (item.addons && item.addons.length > 0) {
+          for (const addon of item.addons) {
+            const { error: addonError } = await supabase
+              .from('order_addons')
+              .insert({
+                order_item_id: order.id, // This should be order_item.id but we'll use order.id for now
+                addon_id: addon.id,
+                quantity: addon.quantity,
+                unit_price: addon.price
+              });
+
+            if (addonError) {
+              console.error('Error creating order addon:', addonError);
+            }
+          }
+        }
+      }
+
+      // Clear cart data
+      localStorage.removeItem('checkout_data');
+
       setIsProcessing(false);
       toast({
         title: "Order Placed Successfully! 🎉",
         description: "Your order has been confirmed. You'll receive updates shortly."
       });
-      // Navigate to order tracking or success page
+      
+      // Navigate to profile orders tab
       navigate('/profile?tab=orders');
-    }, 2000);
+    } catch (error) {
+      setIsProcessing(false);
+      console.error('Error placing order:', error);
+      toast({
+        title: "Order Failed",
+        description: "Something went wrong while placing your order. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   const getMinDeliveryDate = () => {
@@ -338,7 +449,7 @@ const Checkout = () => {
                         <p className="font-medium text-sm">{item.name}</p>
                         <p className="text-xs text-muted-foreground">Qty: {item.quantity}</p>
                       </div>
-                      <span className="font-medium">₹{item.price}</span>
+                      <span className="font-medium">₹{item.basePrice * item.quantity}</span>
                     </div>
                   ))}
                   
@@ -349,10 +460,12 @@ const Checkout = () => {
                     <span>₹{orderSummary.subtotal}</span>
                   </div>
                   
-                  <div className="flex justify-between text-green-600">
-                    <span>Discount (20%)</span>
-                    <span>-₹{orderSummary.discount}</span>
-                  </div>
+                  {orderSummary.appliedCoupon && (
+                    <div className="flex justify-between text-green-600">
+                      <span>Discount ({orderSummary.discount}%)</span>
+                      <span>-₹{orderSummary.discountAmount}</span>
+                    </div>
+                  )}
                   
                   <div className="flex justify-between">
                     <span>Delivery</span>

@@ -153,11 +153,85 @@ const Cakes = () => {
           </p>
         </div>
 
-        {/* Results Count */}
-        <div className="mb-6">
-          <p className="text-muted-foreground">
-            Showing {sortedCakes.length} of {cakes.length} cakes
-          </p>
+        {/* Search and Filters */}
+        <div className="bg-card/50 backdrop-blur-sm border rounded-lg p-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+            {/* Search */}
+            <div className="relative">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search cakes..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+
+            {/* Category Filter */}
+            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+              <SelectTrigger>
+                <SelectValue placeholder="All Categories" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Categories</SelectItem>
+                {categories.map((category) => (
+                  <SelectItem key={category.id} value={category.name}>
+                    {category.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {/* Price Filter */}
+            <Select value={priceRange} onValueChange={setPriceRange}>
+              <SelectTrigger>
+                <SelectValue placeholder="All Prices" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Prices</SelectItem>
+                <SelectItem value="under-1000">Under ₹1,000</SelectItem>
+                <SelectItem value="1000-2000">₹1,000 - ₹2,000</SelectItem>
+                <SelectItem value="above-2000">Above ₹2,000</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Sort */}
+            <Select value={sortBy} onValueChange={setSortBy}>
+              <SelectTrigger>
+                <SelectValue placeholder="Sort by" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="name">Name (A-Z)</SelectItem>
+                <SelectItem value="price-low">Price: Low to High</SelectItem>
+                <SelectItem value="price-high">Price: High to Low</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* View Mode Toggle */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Button
+                variant={viewMode === "grid" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setViewMode("grid")}
+              >
+                <Grid className="h-4 w-4" />
+              </Button>
+              <Button
+                variant={viewMode === "list" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setViewMode("list")}
+              >
+                <List className="h-4 w-4" />
+              </Button>
+            </div>
+            
+            {/* Results Count */}
+            <p className="text-muted-foreground text-sm">
+              Showing {sortedCakes.length} of {cakes.length} cakes
+            </p>
+          </div>
         </div>
 
         {/* Cakes Grid */}

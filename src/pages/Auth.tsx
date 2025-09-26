@@ -199,7 +199,7 @@ const Auth = () => {
           title: "Registration successful!",
           description: "Welcome to Sweet Delights!"
         });
-        navigate("/cakes");
+        navigate("/profile");
       } else {
         toast({
           title: "Registration successful!",

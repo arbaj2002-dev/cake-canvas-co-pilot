@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { useAppSelector, useAppDispatch } from "@/store/hooks";
 import { removeFromCart, updateCartItemQuantity, updateCartItemAddons } from "@/store/slices/cartSlice";
+import { supabase } from "@/integrations/supabase/client";
 
 const Cart = () => {
   const { toast } = useToast();
@@ -47,8 +48,32 @@ const Cart = () => {
     dispatch(updateCartItemAddons({ id: itemId, addons: updatedAddons }));
   };
 
-  const applyCoupon = () => {
+  const applyCoupon = async () => {
     if (couponCode.toUpperCase() === "MY_FIRST_CAKE20" && !appliedCoupon) {
+      // Check if this is customer's first order
+      const customerPhone = localStorage.getItem('customer_phone');
+      
+      if (customerPhone) {
+        try {
+          const { data: existingOrders } = await supabase
+            .from('orders')
+            .select('id')
+            .eq('delivery_phone', customerPhone);
+
+          if (existingOrders && existingOrders.length > 0) {
+            toast({
+              title: "Coupon Not Applicable",
+              description: "This coupon is only valid for first-time customers",
+              variant: "destructive"
+            });
+            setCouponCode("");
+            return;
+          }
+        } catch (error) {
+          console.error('Error checking customer order history:', error);
+        }
+      }
+
       setAppliedCoupon("MY_FIRST_CAKE20");
       setDiscount(20);
       toast({
@@ -273,7 +298,18 @@ const Cart = () => {
                     
                     <Button 
                       className="w-full bg-gradient-button shadow-button"
-                      onClick={() => navigate('/checkout')}
+                      onClick={() => {
+                        // Store cart data for checkout
+                        localStorage.setItem('checkout_data', JSON.stringify({
+                          items: cartItems,
+                          subtotal,
+                          discount,
+                          discountAmount,
+                          total: finalTotal,
+                          appliedCoupon
+                        }));
+                        navigate('/checkout');
+                      }}
                     >
                       Proceed to Checkout
                     </Button>
