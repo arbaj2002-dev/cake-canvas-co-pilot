@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MapPin, Phone, Mail, Clock, Send } from "lucide-react";
 import Header from "@/components/Header";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 const Contact = () => {
   const { toast } = useToast();
@@ -19,17 +20,49 @@ const Contact = () => {
     message: ""
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validation
+    if (!formData.name || !formData.email || !formData.subject || !formData.message) {
+      toast({
+        title: "Missing Information",
+        description: "Please fill in all required fields.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setIsLoading(true);
     
-    // Simulate form submission
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      // Insert query into Supabase
+      const { error } = await supabase
+        .from('customer_queries')
+        .insert({
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone || null,
+          message: `Subject: ${formData.subject}\n\n${formData.message}`,
+          status: 'PENDING'
+        });
+
+      if (error) {
+        console.error('Error submitting query:', error);
+        toast({
+          title: "Submission Failed",
+          description: "There was an error submitting your message. Please try again.",
+          variant: "destructive"
+        });
+        return;
+      }
+
       toast({
-        title: "Message Sent!",
-        description: "Thank you for contacting us. We'll get back to you soon!"
+        title: "Message Sent Successfully! 📧",
+        description: "Thank you for contacting us. We'll get back to you within 24 hours."
       });
+      
+      // Reset form
       setFormData({
         name: "",
         email: "",
@@ -37,7 +70,16 @@ const Contact = () => {
         subject: "",
         message: ""
       });
-    }, 1500);
+    } catch (error) {
+      console.error('Error:', error);
+      toast({
+        title: "Submission Failed",
+        description: "There was an error submitting your message. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {

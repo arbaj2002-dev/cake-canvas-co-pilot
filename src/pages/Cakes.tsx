@@ -7,6 +7,7 @@ import { Search, Filter, Grid, List } from "lucide-react";
 import CakeCard from "@/components/CakeCard";
 import Header from "@/components/Header";
 import { supabase } from "@/integrations/supabase/client";
+import { useAppSelector } from "@/store/hooks";
 
 // Import our generated images as fallbacks
 import weddingCake from "@/assets/wedding-cake.jpg";
@@ -41,13 +42,16 @@ const Cakes = () => {
   const [sortBy, setSortBy] = useState<string>("name");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
+  // Get auth state to trigger refetch when user logs in
+  const { isAuthenticated } = useAppSelector(state => state.auth);
+
   // Fallback images mapping
   const fallbackImages = [heroCake, weddingCake, rainbowCake, chocolateCake];
 
   useEffect(() => {
     fetchCakes();
     fetchCategories();
-  }, []);
+  }, [isAuthenticated]); // Refetch when authentication state changes
 
   const fetchCategories = async () => {
     try {

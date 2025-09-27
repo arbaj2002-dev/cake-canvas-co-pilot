@@ -9,55 +9,91 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { User, Heart, ShoppingBag, RefreshCw, Lock, Phone, Mail, MapPin } from "lucide-react";
 import Header from "@/components/Header";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useAppSelector } from "@/store/hooks";
 
 const Profile = () => {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [showPasswordReset, setShowPasswordReset] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
+  const { user, isAuthenticated } = useAppSelector(state => state.auth);
   
-  // Mock user data
+  // User profile data
   const [userProfile, setUserProfile] = useState({
-    name: "John Doe",
-    phone: "+91 9876543210",
-    email: "john.doe@example.com",
-    address: "123 Sweet Street, Cake Town, 12345"
+    name: user?.name || "",
+    phone: user?.phone || "",
+    email: user?.email || "",
+    address: ""
   });
 
-  // Mock liked cakes
+  // Mock liked cakes (you can implement this with Supabase later)
   const likedCakes = [
     { id: 1, name: "Chocolate Birthday Delight", price: 899, image: "/placeholder.svg" },
     { id: 2, name: "Rainbow Layer Cake", price: 1299, image: "/placeholder.svg" },
     { id: 3, name: "Elegant Wedding Cake", price: 2499, image: "/placeholder.svg" },
   ];
 
-  // Mock orders
-  const [orders, setOrders] = useState([
-    { 
-      id: "ORD001", 
-      date: "2024-01-15", 
-      total: 1899, 
-      status: "Completed", 
-      items: ["Chocolate Birthday Cake", "Candles Set"],
-      delivery_address: "123 Sweet Street, Cake Town"
-    },
-    { 
-      id: "ORD002", 
-      date: "2024-01-10", 
-      total: 2499, 
-      status: "Ongoing", 
-      items: ["Wedding Cake 3-Tier", "Gift Wrapping"],
-      delivery_address: "456 Love Avenue, Romance City"
-    },
-    { 
-      id: "ORD003", 
-      date: "2024-01-05", 
-      total: 1299, 
-      status: "Pending", 
-      items: ["Rainbow Layer Cake"],
-      delivery_address: "789 Party Lane, Celebration Town"
-    },
-  ]);
+  // Orders state
+  const [orders, setOrders] = useState<any[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
+
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      setUserProfile({
+        name: user.name || "",
+        phone: user.phone || "",
+        email: user.email || "",
+        address: ""
+      });
+      fetchUserOrders();
+    }
+  }, [isAuthenticated, user]);
+
+  const fetchUserOrders = async () => {
+    if (!user?.phone) return;
+    
+    setOrdersLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('orders')
+        .select(`
+          id,
+          created_at,
+          total_amount,
+          status,
+          delivery_address,
+          order_items (
+            quantity,
+            products (
+              name
+            )
+          )
+        `)
+        .eq('delivery_phone', user.phone)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching orders:', error);
+      } else {
+        const formattedOrders = data?.map(order => ({
+          id: order.id.slice(-8), // Show last 8 characters
+          date: new Date(order.created_at).toLocaleDateString(),
+          total: order.total_amount,
+          status: order.status,
+          items: order.order_items?.map(item => 
+            `${item.products?.name} (${item.quantity})`
+          ) || [],
+          delivery_address: order.delivery_address
+        })) || [];
+        setOrders(formattedOrders);
+      }
+    } catch (error) {
+      console.error('Error:', error);
+    } finally {
+      setOrdersLoading(false);
+    }
+  };
 
   const handleUpdateProfile = () => {
     setIsLoading(true);
@@ -79,10 +115,7 @@ const Profile = () => {
   };
 
   const refetchOrders = () => {
-    toast({
-      title: "Orders Refreshed",
-      description: "Your orders have been refreshed with latest data.",
-    });
+    fetchUserOrders();
   };
 
   const getStatusColor = (status: string) => {
@@ -249,7 +282,11 @@ const Profile = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {orders.length > 0 ? (
+                  {ordersLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                    </div>
+                  ) : orders.length > 0 ? (
                     <div className="space-y-3">
                       {orders.map((order) => (
                         <div 
@@ -271,7 +308,7 @@ const Profile = () => {
                                 {order.date} • ₹{order.total}
                               </p>
                               <p className="text-sm text-muted-foreground">
-                                {order.items.join(", ")}
+                                {Array.isArray(order.items) ? order.items.join(", ") : "No items"}
                               </p>
                             </div>
                           </div>
@@ -341,7 +378,9 @@ const Profile = () => {
                   </div>
                   <div>
                     <Label>Items</Label>
-                    <p className="font-medium">{selectedOrder.items.join(", ")}</p>
+                    <p className="font-medium">
+                      {Array.isArray(selectedOrder.items) ? selectedOrder.items.join(", ") : "No items"}
+                    </p>
                   </div>
                 </div>
                 <div>

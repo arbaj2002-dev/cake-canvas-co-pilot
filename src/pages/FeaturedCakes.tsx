@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useAppSelector } from "@/store/hooks";
 
 // Import our generated images
 import heroCake from "@/assets/hero-cake.jpg";
@@ -24,10 +25,12 @@ const FeaturedCakes = () => {
   const [featuredCakes, setFeaturedCakes] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Get auth state to trigger refetch when user logs in
+  const { isAuthenticated } = useAppSelector(state => state.auth);
 
   useEffect(() => {
     fetchFeaturedCakes();
-  }, []);
+  }, [isAuthenticated]); // Refetch when authentication state changes
 
   const fetchFeaturedCakes = async () => {
     try {

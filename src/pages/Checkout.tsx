@@ -87,43 +87,95 @@ const Checkout = () => {
   const handlePlaceOrder = async () => {
     setIsProcessing(true);
     
+    // Validation
+    if (!customerDetails.name || !customerDetails.phone || !deliveryInfo.date) {
+      toast({
+        title: "Missing Information",
+        description: "Please fill in all required fields.",
+        variant: "destructive"
+      });
+      setIsProcessing(false);
+      return;
+    }
+
+    if (selectedAddress === 'new' && (!newAddress.street || !newAddress.city || !newAddress.pincode)) {
+      toast({
+        title: "Incomplete Address",
+        description: "Please fill in all address fields.",
+        variant: "destructive"
+      });
+      setIsProcessing(false);
+      return;
+    }
+
     try {
-      // Create customer first
-      const { data: customer, error: customerError } = await supabase
+      // Prepare delivery address
+      const deliveryAddress = selectedAddress === 'new' 
+        ? `${newAddress.street}, ${newAddress.city}, ${newAddress.pincode}${newAddress.landmark ? ', Near ' + newAddress.landmark : ''}`
+        : savedAddresses.find(addr => addr.id === selectedAddress)?.address || '';
+
+      // Check if customer already exists
+      let customerId = null;
+      const { data: existingCustomer } = await supabase
         .from('customers')
-        .insert({
-          name: customerDetails.name,
-          phone: customerDetails.phone,
-          email: customerDetails.email,
-          address: selectedAddress === 'new' 
-            ? `${newAddress.street}, ${newAddress.city}, ${newAddress.pincode}` 
-            : savedAddresses.find(addr => addr.id === selectedAddress)?.address
-        })
-        .select()
+        .select('id')
+        .eq('phone', customerDetails.phone)
         .single();
 
-      if (customerError) {
-        console.error('Error creating customer:', customerError);
-        throw customerError;
+      if (existingCustomer) {
+        customerId = existingCustomer.id;
+        // Update customer details
+        await supabase
+          .from('customers')
+          .update({
+            name: customerDetails.name,
+            email: customerDetails.email || null,
+            address: deliveryAddress
+          })
+          .eq('id', customerId);
+      } else {
+        // Create new customer
+        const { data: newCustomer, error: customerError } = await supabase
+          .from('customers')
+          .insert({
+            name: customerDetails.name,
+            phone: customerDetails.phone,
+            email: customerDetails.email || null,
+            address: deliveryAddress
+          })
+          .select('id')
+          .single();
+
+        if (customerError) {
+          console.error('Error creating customer:', customerError);
+          throw customerError;
+        }
+        customerId = newCustomer.id;
       }
 
       // Store customer phone for future coupon validation
       localStorage.setItem('customer_phone', customerDetails.phone);
 
+      // Prepare order notes with delivery preferences
+      const orderNotes = [
+        deliveryInfo.instructions,
+        deliveryInfo.time ? `Preferred time: ${deliveryInfo.time}` : '',
+        deliveryInfo.date ? `Delivery date: ${deliveryInfo.date}` : ''
+      ].filter(Boolean).join('\n');
+
       // Create order
       const { data: order, error: orderError } = await supabase
         .from('orders')
         .insert({
-          customer_id: customer.id,
+          customer_id: customerId,
           total_amount: orderSummary.total,
           payment_method: paymentMethod,
           payment_status: paymentMethod === 'cod' ? 'pending' : 'completed',
           delivery_name: customerDetails.name,
           delivery_phone: customerDetails.phone,
-          delivery_address: selectedAddress === 'new' 
-            ? `${newAddress.street}, ${newAddress.city}, ${newAddress.pincode}`
-            : savedAddresses.find(addr => addr.id === selectedAddress)?.address,
-          order_notes: deliveryInfo.instructions
+          delivery_address: deliveryAddress,
+          order_notes: orderNotes,
+          status: 'pending'
         })
         .select()
         .single();
@@ -135,18 +187,21 @@ const Checkout = () => {
 
       // Create order items
       for (const item of orderSummary.items) {
-        const { error: itemError } = await supabase
+        const { data: orderItem, error: itemError } = await supabase
           .from('order_items')
           .insert({
             order_id: order.id,
             product_id: item.id,
             quantity: item.quantity,
             unit_price: item.basePrice,
-            custom_message: item.customMessage
-          });
+            custom_message: item.customMessage || null
+          })
+          .select('id')
+          .single();
 
         if (itemError) {
           console.error('Error creating order item:', itemError);
+          continue;
         }
 
         // Create order addons if any
@@ -155,7 +210,7 @@ const Checkout = () => {
             const { error: addonError } = await supabase
               .from('order_addons')
               .insert({
-                order_item_id: order.id, // This should be order_item.id but we'll use order.id for now
+                order_item_id: orderItem.id,
                 addon_id: addon.id,
                 quantity: addon.quantity,
                 unit_price: addon.price
@@ -171,22 +226,22 @@ const Checkout = () => {
       // Clear cart data
       localStorage.removeItem('checkout_data');
 
-      setIsProcessing(false);
       toast({
         title: "Order Placed Successfully! 🎉",
-        description: "Your order has been confirmed. You'll receive updates shortly."
+        description: `Order #${order.id.slice(-8)} has been confirmed. You'll receive updates shortly.`
       });
       
       // Navigate to profile orders tab
       navigate('/profile?tab=orders');
     } catch (error) {
-      setIsProcessing(false);
       console.error('Error placing order:', error);
       toast({
         title: "Order Failed",
         description: "Something went wrong while placing your order. Please try again.",
         variant: "destructive"
       });
+    } finally {
+      setIsProcessing(false);
     }
   };
 
