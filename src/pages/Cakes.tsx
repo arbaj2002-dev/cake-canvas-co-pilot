@@ -3,7 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Search, Filter, Grid, List } from "lucide-react";
+import { Search, Filter, Grid2x2 as Grid, List } from "lucide-react";
 import CakeCard from "@/components/CakeCard";
 import Header from "@/components/Header";
 import { supabase } from "@/integrations/supabase/client";
