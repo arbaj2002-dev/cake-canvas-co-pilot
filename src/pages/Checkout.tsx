@@ -12,6 +12,15 @@ import Header from "@/components/Header";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+} from "@/components/ui/drawer";
 
 const Checkout = () => {
   const { toast } = useToast();
@@ -21,6 +30,7 @@ const Checkout = () => {
   const [selectedAddress, setSelectedAddress] = useState("home");
   const [editingItemIndex, setEditingItemIndex] = useState<number | null>(null);
   const [availableAddons, setAvailableAddons] = useState<any[]>([]);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   const [customerDetails, setCustomerDetails] = useState({
     name: "John Doe",
@@ -606,48 +616,14 @@ const Checkout = () => {
                         variant="outline"
                         size="sm"
                         className="w-full text-xs"
-                        onClick={() => setEditingItemIndex(editingItemIndex === index ? null : index)}
+                        onClick={() => {
+                          setEditingItemIndex(index);
+                          setIsDrawerOpen(true);
+                        }}
                       >
                         <Package className="h-3 w-3 mr-1" />
-                        {editingItemIndex === index ? 'Hide Add-ons' : 'Add More Add-ons'}
+                        Add More Add-ons
                       </Button>
-                      
-                      {editingItemIndex === index && availableAddons.length > 0 && (
-                        <div className="space-y-2 p-3 border rounded-lg bg-muted/20">
-                          <p className="text-xs font-medium">Available Add-ons:</p>
-                          {availableAddons.map((addon) => (
-                            <div key={addon.id} className="flex items-center justify-between text-xs">
-                              <div className="flex-1">
-                                <p className="font-medium">{addon.name}</p>
-                                <p className="text-muted-foreground">₹{addon.price}</p>
-                              </div>
-                              <div className="flex items-center gap-1">
-                                {getAddonQuantity(index, addon.id) > 0 && (
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="h-6 w-6 p-0"
-                                    onClick={() => handleAddonChange(index, addon, -1)}
-                                  >
-                                    <Minus className="h-3 w-3" />
-                                  </Button>
-                                )}
-                                {getAddonQuantity(index, addon.id) > 0 && (
-                                  <span className="w-4 text-center">{getAddonQuantity(index, addon.id)}</span>
-                                )}
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="h-6 w-6 p-0"
-                                  onClick={() => handleAddonChange(index, addon, 1)}
-                                >
-                                  <Plus className="h-3 w-3" />
-                                </Button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
                     </div>
                   ))}
                   
@@ -720,6 +696,71 @@ const Checkout = () => {
           </div>
         </div>
       </div>
+      
+      {/* Add-ons Drawer for Mobile */}
+      <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
+        <DrawerContent className="max-h-[85vh] w-full">
+          <DrawerHeader>
+            <DrawerTitle>Customize Add-ons</DrawerTitle>
+            <DrawerDescription>
+              {editingItemIndex !== null && orderSummary.items[editingItemIndex] && (
+                <>Select add-ons for {orderSummary.items[editingItemIndex].name}</>
+              )}
+            </DrawerDescription>
+          </DrawerHeader>
+          
+          <div className="overflow-y-auto px-4 pb-4 space-y-3">
+            {editingItemIndex !== null && availableAddons.map((addon) => (
+              <div key={addon.id} className="flex items-center justify-between p-3 border rounded-lg bg-card">
+                <div className="flex-1">
+                  <p className="font-medium text-sm">{addon.name}</p>
+                  <p className="text-xs text-muted-foreground">{addon.description}</p>
+                  <p className="text-sm font-semibold mt-1 text-primary">₹{addon.price}</p>
+                </div>
+                <div className="flex items-center gap-2 ml-4">
+                  {editingItemIndex !== null && getAddonQuantity(editingItemIndex, addon.id) > 0 && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 w-8 p-0"
+                      onClick={() => handleAddonChange(editingItemIndex, addon, -1)}
+                    >
+                      <Minus className="h-4 w-4" />
+                    </Button>
+                  )}
+                  {editingItemIndex !== null && getAddonQuantity(editingItemIndex, addon.id) > 0 && (
+                    <span className="w-6 text-center font-medium">
+                      {getAddonQuantity(editingItemIndex, addon.id)}
+                    </span>
+                  )}
+                  <Button
+                    variant="default"
+                    size="sm"
+                    className="h-8 w-8 p-0"
+                    onClick={() => editingItemIndex !== null && handleAddonChange(editingItemIndex, addon, 1)}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+          
+          <DrawerFooter className="border-t">
+            <Button 
+              className="w-full bg-gradient-button"
+              onClick={() => setIsDrawerOpen(false)}
+            >
+              Confirm Add-ons
+            </Button>
+            <DrawerClose asChild>
+              <Button variant="outline" className="w-full">
+                Cancel
+              </Button>
+            </DrawerClose>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
     </div>
   );
 };
