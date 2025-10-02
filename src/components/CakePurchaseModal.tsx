@@ -177,12 +177,12 @@ export const CakePurchaseModal = ({ isOpen, onClose, cake }: CakePurchaseModalPr
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col p-0">
+        <DialogHeader className="px-6 pt-6 pb-4">
           <DialogTitle className="text-2xl text-primary">{cake.name}</DialogTitle>
         </DialogHeader>
         
-        <div className="space-y-6">
+        <div className="flex-1 overflow-y-auto px-6 space-y-6">
           {/* Cake Image and Details */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
@@ -276,22 +276,22 @@ export const CakePurchaseModal = ({ isOpen, onClose, cake }: CakePurchaseModalPr
               </div>
             </div>
           )}
+        </div>
 
-          {/* Total and Add to Cart */}
-          <div className="border-t pt-4">
-            <div className="flex items-center justify-between mb-4">
-              <span className="text-lg font-semibold">Total:</span>
-              <span className="text-xl font-bold text-primary">₹{Math.round(calculateTotal())}</span>
-            </div>
-            <Button 
-              onClick={handleAddToCart}
-              className="w-full bg-gradient-button shadow-button"
-              disabled={!selectedSize}
-            >
-              <ShoppingCart className="h-4 w-4 mr-2" />
-              Add to Cart
-            </Button>
+        {/* Sticky Footer */}
+        <div className="border-t bg-background px-6 py-4 mt-auto">
+          <div className="flex items-center justify-between mb-4">
+            <span className="text-lg font-semibold">Total:</span>
+            <span className="text-xl font-bold text-primary">₹{Math.round(calculateTotal())}</span>
           </div>
+          <Button 
+            onClick={handleAddToCart}
+            className="w-full bg-gradient-button shadow-button"
+            disabled={!selectedSize}
+          >
+            <ShoppingCart className="h-4 w-4 mr-2" />
+            Add to Cart
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

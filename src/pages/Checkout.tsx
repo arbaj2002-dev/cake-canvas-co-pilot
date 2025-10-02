@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { MapPin, CreditCard, Truck, Calendar, Clock, Plus, CreditCard as Edit2 } from "lucide-react";
+import { MapPin, CreditCard, Truck, Calendar, Clock, Plus, CreditCard as Edit2, Minus, Package } from "lucide-react";
 import Header from "@/components/Header";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
@@ -19,6 +19,8 @@ const Checkout = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("cod");
   const [selectedAddress, setSelectedAddress] = useState("home");
+  const [editingItemIndex, setEditingItemIndex] = useState<number | null>(null);
+  const [availableAddons, setAvailableAddons] = useState<any[]>([]);
 
   const [customerDetails, setCustomerDetails] = useState({
     name: "John Doe",
@@ -82,7 +84,87 @@ const Checkout = () => {
       // Redirect to cart if no data
       navigate('/cart');
     }
+    
+    // Fetch available addons
+    fetchAddons();
   }, [navigate]);
+
+  const fetchAddons = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('addons')
+        .select('id, name, description, price, type')
+        .eq('is_active', true)
+        .order('name');
+
+      if (!error && data) {
+        setAvailableAddons(data);
+      }
+    } catch (error) {
+      console.error('Error fetching addons:', error);
+    }
+  };
+
+  const handleAddonChange = (itemIndex: number, addon: any, change: number) => {
+    setOrderSummary(prev => {
+      const newItems = [...prev.items];
+      const item = newItems[itemIndex];
+      const existingAddon = item.addons?.find((a: any) => a.id === addon.id);
+      
+      if (existingAddon) {
+        const newQuantity = existingAddon.quantity + change;
+        if (newQuantity <= 0) {
+          item.addons = item.addons.filter((a: any) => a.id !== addon.id);
+        } else {
+          item.addons = item.addons.map((a: any) =>
+            a.id === addon.id ? { ...a, quantity: newQuantity } : a
+          );
+        }
+      } else if (change > 0) {
+        item.addons = [...(item.addons || []), {
+          id: addon.id,
+          name: addon.name,
+          price: addon.price,
+          quantity: 1
+        }];
+      }
+      
+      // Recalculate totals
+      const subtotal = newItems.reduce((sum, item) => {
+        const itemTotal = item.basePrice * item.quantity;
+        const addonsTotal = (item.addons || []).reduce((addonSum: number, addon: any) => 
+          addonSum + (addon.price * addon.quantity), 0);
+        return sum + itemTotal + addonsTotal;
+      }, 0);
+      
+      const discountAmount = prev.appliedCoupon ? Math.round(subtotal * prev.discount / 100) : 0;
+      const total = subtotal - discountAmount;
+      
+      // Update localStorage
+      const checkoutData = {
+        items: newItems,
+        subtotal,
+        discount: prev.discount,
+        discountAmount,
+        total,
+        appliedCoupon: prev.appliedCoupon
+      };
+      localStorage.setItem('checkout_data', JSON.stringify(checkoutData));
+      
+      return {
+        ...prev,
+        items: newItems,
+        subtotal,
+        discountAmount,
+        total
+      };
+    });
+  };
+
+  const getAddonQuantity = (itemIndex: number, addonId: string) => {
+    const item = orderSummary.items[itemIndex];
+    return item?.addons?.find((a: any) => a.id === addonId)?.quantity || 0;
+  };
 
   const handlePlaceOrder = async () => {
     setIsProcessing(true);
@@ -499,12 +581,73 @@ const Checkout = () => {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {orderSummary.items.map((item, index) => (
-                    <div key={index} className="flex justify-between items-center">
-                      <div>
-                        <p className="font-medium text-sm">{item.name}</p>
-                        <p className="text-xs text-muted-foreground">Qty: {item.quantity}</p>
+                    <div key={index} className="space-y-2">
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <p className="font-medium text-sm">{item.name}</p>
+                          <p className="text-xs text-muted-foreground">Size: {item.size} • Qty: {item.quantity}</p>
+                          {item.addons && item.addons.length > 0 && (
+                            <div className="mt-1 text-xs text-muted-foreground">
+                              Add-ons: {item.addons.map((a: any) => `${a.name} (${a.quantity})`).join(', ')}
+                            </div>
+                          )}
+                        </div>
+                        <div className="text-right">
+                          <p className="font-medium">₹{item.basePrice * item.quantity}</p>
+                          {item.addons && item.addons.length > 0 && (
+                            <p className="text-xs text-muted-foreground">
+                              +₹{item.addons.reduce((sum: number, a: any) => sum + (a.price * a.quantity), 0)}
+                            </p>
+                          )}
+                        </div>
                       </div>
-                      <span className="font-medium">₹{item.basePrice * item.quantity}</span>
+                      
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full text-xs"
+                        onClick={() => setEditingItemIndex(editingItemIndex === index ? null : index)}
+                      >
+                        <Package className="h-3 w-3 mr-1" />
+                        {editingItemIndex === index ? 'Hide Add-ons' : 'Add More Add-ons'}
+                      </Button>
+                      
+                      {editingItemIndex === index && availableAddons.length > 0 && (
+                        <div className="space-y-2 p-3 border rounded-lg bg-muted/20">
+                          <p className="text-xs font-medium">Available Add-ons:</p>
+                          {availableAddons.map((addon) => (
+                            <div key={addon.id} className="flex items-center justify-between text-xs">
+                              <div className="flex-1">
+                                <p className="font-medium">{addon.name}</p>
+                                <p className="text-muted-foreground">₹{addon.price}</p>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                {getAddonQuantity(index, addon.id) > 0 && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-6 w-6 p-0"
+                                    onClick={() => handleAddonChange(index, addon, -1)}
+                                  >
+                                    <Minus className="h-3 w-3" />
+                                  </Button>
+                                )}
+                                {getAddonQuantity(index, addon.id) > 0 && (
+                                  <span className="w-4 text-center">{getAddonQuantity(index, addon.id)}</span>
+                                )}
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-6 w-6 p-0"
+                                  onClick={() => handleAddonChange(index, addon, 1)}
+                                >
+                                  <Plus className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   ))}
                   
