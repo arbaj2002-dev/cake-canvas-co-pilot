@@ -37,13 +37,10 @@ const Cakes = () => {
   const [sortBy, setSortBy] = useState<string>("name");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
-  // Get auth state to trigger refetch when user logs in
-  const { isAuthenticated } = useAppSelector(state => state.auth);
-
   useEffect(() => {
     fetchCakes();
     fetchCategories();
-  }, [isAuthenticated]); // Refetch when authentication state changes
+  }, [])
 
   const fetchCategories = async () => {
     try {
