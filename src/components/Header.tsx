@@ -39,17 +39,33 @@ const Header = () => {
 
   const handleLogout = async () => {
     try {
-      await supabase.auth.signOut();
+      console.log('Logging out...');
+      const { error } = await supabase.auth.signOut();
+
+      if (error) {
+        console.error('Logout error:', error);
+        toast({
+          title: "Error logging out",
+          description: error.message || "Please try again.",
+          variant: "destructive"
+        });
+        return;
+      }
+
       dispatch(logout());
+      console.log('Logout successful, dispatched logout action');
+
       toast({
         title: "Logged out successfully",
         description: "You have been logged out of your account."
       });
+
       navigate("/");
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Logout exception:', error);
       toast({
         title: "Error logging out",
-        description: "Please try again.",
+        description: error?.message || "Please try again.",
         variant: "destructive"
       });
     }

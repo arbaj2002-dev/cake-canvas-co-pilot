@@ -9,26 +9,30 @@ export const useAuth = () => {
   useEffect(() => {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (session?.user) {
-          // Fetch user profile data
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('user_id', session.user.id)
-            .maybeSingle();
+      (event, session) => {
+        (async () => {
+          console.log('Auth state changed:', event, session ? 'session exists' : 'no session');
 
-          const userData = {
-            id: session.user.id,
-            name: profile?.full_name || '',
-            email: session.user.email || '',
-            phone: profile?.phone || ''
-          };
+          if (session?.user) {
+            // Fetch user profile data
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('user_id', session.user.id)
+              .maybeSingle();
 
-          dispatch(setSession({ session, user: userData }));
-        } else {
-          dispatch(setSession({ session: null, user: null }));
-        }
+            const userData = {
+              id: session.user.id,
+              name: profile?.full_name || '',
+              email: session.user.email || '',
+              phone: profile?.phone || ''
+            };
+
+            dispatch(setSession({ session, user: userData }));
+          } else {
+            dispatch(setSession({ session: null, user: null }));
+          }
+        })();
       }
     );
 
