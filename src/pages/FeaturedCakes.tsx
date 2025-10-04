@@ -23,12 +23,9 @@ const FeaturedCakes = () => {
   const [featuredCakes, setFeaturedCakes] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Get auth state to trigger refetch when user logs in
-  const { isAuthenticated } = useAppSelector(state => state.auth);
-
   useEffect(() => {
     fetchFeaturedCakes();
-  }, [isAuthenticated]); // Refetch when authentication state changes
+  }, []);
 
   const fetchFeaturedCakes = async () => {
     try {
