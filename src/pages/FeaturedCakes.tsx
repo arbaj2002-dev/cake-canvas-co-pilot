@@ -46,6 +46,8 @@ const FeaturedCakes = () => {
         .eq('is_active', true)
         .limit(3);
 
+      console.log({data});
+      
       if (error) {
         console.error('Error fetching featured cakes:', error);
         setFeaturedCakes([]);
