@@ -61,6 +61,7 @@ const Cakes = () => {
 
   const fetchCakes = async () => {
     try {
+      console.log('Fetching cakes...');
       const { data, error } = await supabase
         .from('products')
         .select(`
@@ -77,14 +78,18 @@ const Cakes = () => {
         .eq('is_active', true)
         .order('name');
 
+      console.log('Cakes fetch result:', { data, error });
+
       if (error) {
         console.error('Error fetching cakes:', error);
       } else {
+        console.log('Setting cakes:', data?.length || 0);
         setCakes(data || []);
       }
     } catch (error) {
       console.error('Error:', error);
     } finally {
+      console.log('Setting loading to false');
       setLoading(false);
     }
   };
@@ -114,6 +119,13 @@ const Cakes = () => {
       default:
         return a.name.localeCompare(b.name);
     }
+  });
+
+  console.log('Render state:', { 
+    loading, 
+    cakesCount: cakes.length, 
+    filteredCount: filteredCakes.length,
+    sortedCount: sortedCakes.length 
   });
 
   if (loading) {
