@@ -44,6 +44,7 @@ const Cakes = () => {
 
   const fetchCategories = async () => {
     try {
+      console.log('Fetching categories...');
       const { data, error } = await supabase
         .from('categories')
         .select('id, name')
@@ -62,7 +63,8 @@ const Cakes = () => {
   const fetchCakes = async () => {
     try {
       console.log('Fetching cakes...');
-      const { data, error } = await supabase
+      // Primary query (with related category name)
+      const primary = supabase
         .from('products')
         .select(`
           id,
@@ -78,16 +80,37 @@ const Cakes = () => {
         .eq('is_active', true)
         .order('name');
 
+      const timeout = new Promise<never>((_, reject) => setTimeout(() => reject(new Error('supabase-timeout')), 6000));
+      const { data, error } = await Promise.race([Promise.resolve(primary as any), timeout]) as any;
       console.log('Cakes fetch result:', { data, error });
 
       if (error) {
-        console.error('Error fetching cakes:', error);
-      } else {
-        console.log('Setting cakes:', data?.length || 0);
-        setCakes(data || []);
+        console.error('Error fetching cakes (primary):', error);
+        setCakes([]);
+        return;
       }
-    } catch (error) {
-      console.error('Error:', error);
+
+      setCakes(data || []);
+    } catch (err: any) {
+      if (err?.message === 'supabase-timeout') {
+        console.warn('Primary products query timed out. Falling back to simple query...');
+        // Fallback without relation to avoid potential RLS/join issues
+        const simpleQuery = supabase
+          .from('products')
+          .select('id, name, description, base_price, image_url, is_featured')
+          .eq('is_active', true)
+          .order('name');
+        const { data: simpleData, error: simpleError } = await Promise.resolve(simpleQuery as any) as any;
+        if (simpleError) {
+          console.error('Error fetching cakes (fallback):', simpleError);
+          setCakes([]);
+        } else {
+          setCakes(simpleData || []);
+        }
+      } else {
+        console.error('Unexpected error:', err);
+        setCakes([]);
+      }
     } finally {
       console.log('Setting loading to false');
       setLoading(false);
@@ -133,8 +156,9 @@ const Cakes = () => {
       <div className="min-h-screen bg-gradient-hero">
         <Header />
         <div className="container mx-auto px-4 py-8">
-          <div className="flex items-center justify-center h-64">
+          <div className="flex flex-col items-center justify-center h-64 gap-3">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+            <p className="text-sm text-muted-foreground">Loading cakes...</p>
           </div>
         </div>
       </div>

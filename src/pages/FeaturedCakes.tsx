@@ -29,7 +29,8 @@ const FeaturedCakes = () => {
 
   const fetchFeaturedCakes = async () => {
     try {
-      const { data, error } = await supabase
+      console.log('Fetching featured cakes...');
+      const primary = supabase
         .from('products')
         .select(`
           id,
@@ -46,17 +47,37 @@ const FeaturedCakes = () => {
         .eq('is_active', true)
         .limit(3);
 
-      console.log({data});
-      
+      const timeout = new Promise<never>((_, reject) => setTimeout(() => reject(new Error('supabase-timeout')), 6000));
+      const { data, error } = await Promise.race([Promise.resolve(primary as any), timeout]) as any;
+      console.log('Featured cakes result:', { data, error });
+
       if (error) {
-        console.error('Error fetching featured cakes:', error);
+        console.error('Error fetching featured cakes (primary):', error);
         setFeaturedCakes([]);
-      } else {
-        setFeaturedCakes(data || []);
+        return;
       }
-    } catch (error) {
-      console.error('Error:', error);
-      setFeaturedCakes([]);
+
+      setFeaturedCakes(data || []);
+    } catch (err: any) {
+      if (err?.message === 'supabase-timeout') {
+        console.warn('Featured products query timed out. Falling back to simple query...');
+        const simpleQuery = supabase
+          .from('products')
+          .select('id, name, description, base_price, image_url, is_featured')
+          .eq('is_featured', true)
+          .eq('is_active', true)
+          .limit(3);
+        const { data: simpleData, error: simpleError } = await Promise.resolve(simpleQuery as any) as any;
+        if (simpleError) {
+          console.error('Error fetching featured cakes (fallback):', simpleError);
+          setFeaturedCakes([]);
+        } else {
+          setFeaturedCakes(simpleData || []);
+        }
+      } else {
+        console.error('Unexpected error:', err);
+        setFeaturedCakes([]);
+      }
     } finally {
       setLoading(false);
     }
