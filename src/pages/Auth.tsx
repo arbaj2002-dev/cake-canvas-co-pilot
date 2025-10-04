@@ -112,7 +112,7 @@ const Auth = () => {
           .from('profiles')
           .select('*')
           .eq('user_id', data.user.id)
-          .single();
+          .maybeSingle();
 
         const userData = {
           id: data.user.id,
@@ -122,7 +122,7 @@ const Auth = () => {
         };
 
         dispatch(setSession({ session: data.session, user: userData }));
-        
+
         toast({
           title: "Login successful!",
           description: "Welcome back to Sweet Delights!"

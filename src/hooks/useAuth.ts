@@ -16,7 +16,7 @@ export const useAuth = () => {
             .from('profiles')
             .select('*')
             .eq('user_id', session.user.id)
-            .single();
+            .maybeSingle();
 
           const userData = {
             id: session.user.id,
@@ -39,7 +39,7 @@ export const useAuth = () => {
           .from('profiles')
           .select('*')
           .eq('user_id', session.user.id)
-          .single();
+          .maybeSingle();
 
         const userData = {
           id: session.user.id,
