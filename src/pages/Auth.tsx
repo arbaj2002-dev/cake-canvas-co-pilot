@@ -34,6 +34,10 @@ const Auth = () => {
     password: ""
   });
 
+  // Forgot password state
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+
   // Register form state
   const [registerForm, setRegisterForm] = useState({
     name: "",
@@ -129,6 +133,56 @@ const Auth = () => {
       console.error('Login error:', error);
       toast({
         title: "Login failed",
+        description: "Something went wrong. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    if (!resetEmail) {
+      toast({
+        title: "Email required",
+        description: "Please enter your email address",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!validateEmail(resetEmail)) {
+      toast({
+        title: "Invalid email",
+        description: "Please enter a valid email address",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
+        redirectTo: `${window.location.origin}/auth?reset=true`
+      });
+
+      if (error) {
+        toast({
+          title: "Error",
+          description: error.message,
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Check your email",
+          description: "We've sent you a password reset link"
+        });
+        setShowForgotPassword(false);
+        setResetEmail("");
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
         description: "Something went wrong. Please try again.",
         variant: "destructive"
       });
@@ -258,48 +312,98 @@ const Auth = () => {
                 </TabsList>
                 
                 <TabsContent value="login">
-                  <form onSubmit={handleLoginSubmit} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="login-email">Email</Label>
-                      <Input
-                        id="login-email"
-                        type="email"
-                        placeholder="Enter your email"
-                        value={loginForm.email}
-                        onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })}
-                      />
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="login-password">Password</Label>
-                      <div className="relative">
+                  {showForgotPassword ? (
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="reset-email">Email</Label>
                         <Input
-                          id="login-password"
-                          type={showPassword ? "text" : "password"}
-                          placeholder="Enter your password"
-                          value={loginForm.password}
-                          onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
+                          id="reset-email"
+                          type="email"
+                          placeholder="Enter your email"
+                          value={resetEmail}
+                          onChange={(e) => setResetEmail(e.target.value)}
                         />
-                        <Button
+                      </div>
+                      
+                      <div className="flex gap-2">
+                        <Button 
                           type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                          onClick={() => setShowPassword(!showPassword)}
+                          variant="outline"
+                          className="flex-1"
+                          onClick={() => {
+                            setShowForgotPassword(false);
+                            setResetEmail("");
+                          }}
                         >
-                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          Back
+                        </Button>
+                        <Button 
+                          type="button"
+                          className="flex-1 bg-gradient-button shadow-button"
+                          onClick={handleForgotPassword}
+                          disabled={loading}
+                        >
+                          {loading ? "Sending..." : "Send Reset Link"}
                         </Button>
                       </div>
                     </div>
-                    
-                    <Button 
-                      type="submit" 
-                      className="w-full bg-gradient-button shadow-button"
-                      disabled={loading}
-                    >
-                      {loading ? "Signing in..." : "Login"}
-                    </Button>
-                  </form>
+                  ) : (
+                    <form onSubmit={handleLoginSubmit} className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="login-email">Email</Label>
+                        <Input
+                          id="login-email"
+                          type="email"
+                          placeholder="Enter your email"
+                          value={loginForm.email}
+                          onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })}
+                        />
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <Label htmlFor="login-password">Password</Label>
+                          <Button
+                            type="button"
+                            variant="link"
+                            className="text-xs text-primary p-0 h-auto"
+                            onClick={() => {
+                              setShowForgotPassword(true);
+                              setResetEmail(loginForm.email);
+                            }}
+                          >
+                            Forgot password?
+                          </Button>
+                        </div>
+                        <div className="relative">
+                          <Input
+                            id="login-password"
+                            type={showPassword ? "text" : "password"}
+                            placeholder="Enter your password"
+                            value={loginForm.password}
+                            onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                            onClick={() => setShowPassword(!showPassword)}
+                          >
+                            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </Button>
+                        </div>
+                      </div>
+                      
+                      <Button 
+                        type="submit" 
+                        className="w-full bg-gradient-button shadow-button"
+                        disabled={loading}
+                      >
+                        {loading ? "Signing in..." : "Login"}
+                      </Button>
+                    </form>
+                  )}
                 </TabsContent>
                 
                 <TabsContent value="register">
