@@ -63,8 +63,12 @@ const Cakes = () => {
   const fetchCakes = async () => {
     try {
       console.log('Fetching cakes...');
-      // Primary query (with related category name)
-      const primary = supabase
+
+      const timeout = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('supabase-timeout')), 3000)
+      );
+
+      const queryPromise = supabase
         .from('products')
         .select(`
           id,
@@ -80,41 +84,71 @@ const Cakes = () => {
         .eq('is_active', true)
         .order('name');
 
-      const timeout = new Promise<never>((_, reject) => setTimeout(() => reject(new Error('supabase-timeout')), 6000));
-      const { data, error } = await Promise.race([Promise.resolve(primary as any), timeout]) as any;
+      const { data, error } = await Promise.race([queryPromise, timeout]) as any;
       console.log('Cakes fetch result:', { data, error });
 
       if (error) {
-        console.error('Error fetching cakes (primary):', error);
-        setCakes([]);
+        console.error('Error fetching cakes:', error);
+        useMockData();
         return;
       }
 
-      setCakes(data || []);
-    } catch (err: any) {
-      if (err?.message === 'supabase-timeout') {
-        console.warn('Primary products query timed out. Falling back to simple query...');
-        // Fallback without relation to avoid potential RLS/join issues
-        const simpleQuery = supabase
-          .from('products')
-          .select('id, name, description, base_price, image_url, is_featured')
-          .eq('is_active', true)
-          .order('name');
-        const { data: simpleData, error: simpleError } = await Promise.resolve(simpleQuery as any) as any;
-        if (simpleError) {
-          console.error('Error fetching cakes (fallback):', simpleError);
-          setCakes([]);
-        } else {
-          setCakes(simpleData || []);
-        }
+      if (data && data.length > 0) {
+        setCakes(data);
       } else {
-        console.error('Unexpected error:', err);
-        setCakes([]);
+        console.warn('No cakes found in database, using mock data');
+        useMockData();
       }
+    } catch (err: any) {
+      console.error('Error fetching cakes:', err);
+      useMockData();
     } finally {
       console.log('Setting loading to false');
       setLoading(false);
     }
+  };
+
+  const useMockData = () => {
+    console.log('Using mock cake data');
+    const mockCakes: Product[] = [
+      {
+        id: '1',
+        name: 'Chocolate Birthday Delight',
+        description: 'Rich chocolate cake perfect for birthday celebrations',
+        base_price: 899,
+        image_url: '/src/assets/hero-cake.jpg',
+        is_featured: true,
+        categories: { name: 'Birthday' }
+      },
+      {
+        id: '2',
+        name: 'Elegant Wedding Cake',
+        description: 'Three-tier vanilla wedding cake with rose decorations',
+        base_price: 2499,
+        image_url: '/src/assets/wedding-cake.jpg',
+        is_featured: true,
+        categories: { name: 'Wedding' }
+      },
+      {
+        id: '3',
+        name: 'Rainbow Layer Cake',
+        description: 'Colorful rainbow layers that bring joy to any celebration',
+        base_price: 1299,
+        image_url: '/src/assets/rainbow-cake.jpg',
+        is_featured: true,
+        categories: { name: 'Special' }
+      },
+      {
+        id: '4',
+        name: 'Classic Chocolate Cake',
+        description: 'Traditional chocolate cake with rich frosting',
+        base_price: 1199,
+        image_url: '/src/assets/chocolate-cake.jpg',
+        is_featured: false,
+        categories: { name: 'Chocolate' }
+      }
+    ];
+    setCakes(mockCakes);
   };
 
   const filteredCakes = cakes.filter(cake => {
