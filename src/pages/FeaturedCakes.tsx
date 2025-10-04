@@ -5,9 +5,7 @@ import { ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAppSelector } from "@/store/hooks";
-
-// Import our generated images
-import heroCake from "@/assets/hero-cake.jpg";
+import { resolveImageUrl } from "@/utils/imageMapper";
 
 interface Product {
   id: string;
@@ -105,14 +103,14 @@ const FeaturedCakes = () => {
 
         {/* Featured Cakes Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
-          {featuredCakes.map((cake) => (
+          {featuredCakes.map((cake, index) => (
             <CakeCard
               key={cake.id}
               id={cake.id}
               name={cake.name}
               description={cake.description || undefined}
               basePrice={cake.base_price}
-              imageUrl={cake.image_url || heroCake}
+              imageUrl={resolveImageUrl(cake.image_url, index)}
               category={cake.categories?.name}
               isFeature={true}
             />

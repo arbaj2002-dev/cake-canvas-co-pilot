@@ -8,12 +8,7 @@ import CakeCard from "@/components/CakeCard";
 import Header from "@/components/Header";
 import { supabase } from "@/integrations/supabase/client";
 import { useAppSelector } from "@/store/hooks";
-
-// Import our generated images as fallbacks
-import weddingCake from "@/assets/wedding-cake.jpg";
-import rainbowCake from "@/assets/rainbow-cake.jpg";
-import chocolateCake from "@/assets/chocolate-cake.jpg";
-import heroCake from "@/assets/hero-cake.jpg";
+import { resolveImageUrl } from "@/utils/imageMapper";
 
 interface Product {
   id: string;
@@ -44,9 +39,6 @@ const Cakes = () => {
 
   // Get auth state to trigger refetch when user logs in
   const { isAuthenticated } = useAppSelector(state => state.auth);
-
-  // Fallback images mapping
-  const fallbackImages = [heroCake, weddingCake, rainbowCake, chocolateCake];
 
   useEffect(() => {
     fetchCakes();
@@ -126,10 +118,6 @@ const Cakes = () => {
         return a.name.localeCompare(b.name);
     }
   });
-
-  const getImageUrl = (cake: Product, index: number) => {
-    return cake.image_url || fallbackImages[index % fallbackImages.length];
-  };
 
   if (loading) {
     return (
@@ -252,7 +240,7 @@ const Cakes = () => {
                   name={cake.name}
                   description={cake.description || undefined}
                   basePrice={cake.base_price}
-                  imageUrl={getImageUrl(cake, index)}
+                  imageUrl={resolveImageUrl(cake.image_url, index)}
                   category={cake.categories?.name}
                   isFeature={cake.is_featured || false}
                 />
