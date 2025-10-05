@@ -18,7 +18,7 @@ import { setFavorites } from "@/store/slices/favoritesSlice";
 const Profile = () => {
   const { toast } = useToast();
   const dispatch = useAppDispatch();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
   const [showPasswordReset, setShowPasswordReset] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
@@ -196,7 +196,7 @@ const Profile = () => {
             </p>
           </div>
 
-          <Tabs value={activeTab} className="w-full">
+          <Tabs value={activeTab} onValueChange={(value) => setSearchParams({ tab: value })} className="w-full">
             <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="profile">Profile Details</TabsTrigger>
               <TabsTrigger value="favourites">Favorite Cakes</TabsTrigger>
