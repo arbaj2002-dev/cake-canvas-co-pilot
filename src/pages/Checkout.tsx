@@ -258,18 +258,25 @@ const Checkout = () => {
         deliveryInfo.date ? `Delivery date: ${deliveryInfo.date}` : ''
       ].filter(Boolean).join('\n');
 
+      // Get current user ID
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+
       // Create order
       const { data: order, error: orderError } = await supabase
         .from('orders')
         .insert({
+          user_id: currentUser?.id || null,
           customer_id: customerId,
+          customer_name: customerDetails.name,
+          customer_phone: customerDetails.phone,
+          customer_email: customerDetails.email || null,
+          delivery_address: deliveryAddress,
+          delivery_date: deliveryInfo.date,
+          delivery_time: deliveryInfo.time || '',
+          special_instructions: deliveryInfo.instructions || null,
           total_amount: orderSummary.total,
           payment_method: paymentMethod,
           payment_status: paymentMethod === 'cod' ? 'pending' : 'completed',
-          delivery_name: customerDetails.name,
-          delivery_phone: customerDetails.phone,
-          delivery_address: deliveryAddress,
-          order_notes: orderNotes,
           status: 'pending'
         })
         .select()
