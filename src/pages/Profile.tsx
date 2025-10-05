@@ -6,14 +6,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { User, Heart, ShoppingBag, RefreshCw, Lock, Phone, Mail, MapPin } from "lucide-react";
+import { User, Heart, ShoppingBag, RefreshCw, Lock } from "lucide-react";
 import Header from "@/components/Header";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { useAppSelector } from "@/store/hooks";
+import { useAppSelector, useAppDispatch } from "@/store/hooks";
+import { useSearchParams } from "react-router-dom";
+import CakeCard from "@/components/CakeCard";
+import { setFavorites } from "@/store/slices/favoritesSlice";
 
 const Profile = () => {
   const { toast } = useToast();
+  const dispatch = useAppDispatch();
+  const [searchParams] = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
   const [showPasswordReset, setShowPasswordReset] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
@@ -27,16 +32,16 @@ const Profile = () => {
     address: ""
   });
 
-  // Mock liked cakes (you can implement this with Supabase later)
-  const likedCakes = [
-    { id: 1, name: "Chocolate Birthday Delight", price: 899, image: "/placeholder.svg" },
-    { id: 2, name: "Rainbow Layer Cake", price: 1299, image: "/placeholder.svg" },
-    { id: 3, name: "Elegant Wedding Cake", price: 2499, image: "/placeholder.svg" },
-  ];
+  // Favorites state
+  const [favoriteCakes, setFavoriteCakes] = useState<any[]>([]);
+  const [favoritesLoading, setFavoritesLoading] = useState(false);
 
   // Orders state
   const [orders, setOrders] = useState<any[]>([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
+
+  // Get tab from URL
+  const activeTab = searchParams.get('tab') || 'profile';
 
   useEffect(() => {
     if (isAuthenticated && user) {
@@ -47,8 +52,53 @@ const Profile = () => {
         address: ""
       });
       fetchUserOrders();
+      fetchFavoriteCakes();
     }
   }, [isAuthenticated, user]);
+
+  const fetchFavoriteCakes = async () => {
+    setFavoritesLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('favorites')
+        .select(`
+          id,
+          product_id,
+          products (
+            id,
+            name,
+            base_price,
+            image_url,
+            description,
+            categories (
+              name
+            )
+          )
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching favorites:', error);
+      } else {
+        const formattedFavorites = data?.map(fav => ({
+          id: fav.products?.id || '',
+          name: fav.products?.name || '',
+          basePrice: fav.products?.base_price || 0,
+          imageUrl: fav.products?.image_url || '',
+          description: fav.products?.description || '',
+          category: fav.products?.categories?.name || ''
+        })) || [];
+        setFavoriteCakes(formattedFavorites);
+        
+        // Sync with Redux
+        dispatch(setFavorites(formattedFavorites));
+      }
+    } catch (error) {
+      console.error('Error:', error);
+    } finally {
+      setFavoritesLoading(false);
+    }
+  };
 
   const fetchUserOrders = async () => {
     if (!user?.phone) return;
@@ -118,6 +168,10 @@ const Profile = () => {
     fetchUserOrders();
   };
 
+  const refetchFavorites = () => {
+    fetchFavoriteCakes();
+  };
+
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
       case 'completed': return 'bg-green-500';
@@ -142,11 +196,11 @@ const Profile = () => {
             </p>
           </div>
 
-          <Tabs defaultValue="profile" className="w-full">
+          <Tabs value={activeTab} className="w-full">
             <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="profile">Profile Details</TabsTrigger>
-              <TabsTrigger value="favorites">Favorite Cakes</TabsTrigger>
-              <TabsTrigger value="orders">My Orders</TabsTrigger>
+              <TabsTrigger value="favourites">Favorite Cakes</TabsTrigger>
+              <TabsTrigger value="my-orders">My Orders</TabsTrigger>
             </TabsList>
 
             {/* Profile Details Tab */}
@@ -226,31 +280,40 @@ const Profile = () => {
             </TabsContent>
 
             {/* Favorite Cakes Tab */}
-            <TabsContent value="favorites" className="space-y-6">
+            <TabsContent value="favourites" className="space-y-6">
               <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Heart className="h-5 w-5" />
-                    Favorite Cakes
+                  <CardTitle className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Heart className="h-5 w-5" />
+                      Favorite Cakes
+                    </div>
+                    <Button variant="outline" size="sm" onClick={refetchFavorites}>
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Refresh
+                    </Button>
                   </CardTitle>
                   <CardDescription>
                     Your liked and saved cakes for future orders
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {likedCakes.length > 0 ? (
+                  {favoritesLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                    </div>
+                  ) : favoriteCakes.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {likedCakes.map((cake) => (
-                        <div key={cake.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
-                          <div className="aspect-square bg-muted rounded-lg mb-3 flex items-center justify-center">
-                            <span className="text-4xl">🍰</span>
-                          </div>
-                          <h3 className="font-semibold mb-1">{cake.name}</h3>
-                          <p className="text-primary font-bold">₹{cake.price}</p>
-                          <Button size="sm" className="w-full mt-2">
-                            Order Again
-                          </Button>
-                        </div>
+                      {favoriteCakes.map((cake) => (
+                        <CakeCard
+                          key={cake.id}
+                          id={cake.id}
+                          name={cake.name}
+                          basePrice={cake.basePrice}
+                          imageUrl={cake.imageUrl}
+                          description={cake.description}
+                          category={cake.category}
+                        />
                       ))}
                     </div>
                   ) : (
@@ -264,7 +327,7 @@ const Profile = () => {
             </TabsContent>
 
             {/* Orders Tab */}
-            <TabsContent value="orders" className="space-y-6">
+            <TabsContent value="my-orders" className="space-y-6">
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center justify-between">

@@ -7,6 +7,8 @@ import { CakePurchaseModal } from "./CakePurchaseModal";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { addToFavorites, removeFromFavorites } from "@/store/slices/favoritesSlice";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
 
 interface CakeCardProps {
   id: string;
@@ -20,24 +22,66 @@ interface CakeCardProps {
 
 const CakeCard = ({ id, name, description, basePrice, imageUrl, category, isFeature }: CakeCardProps) => {
   const dispatch = useAppDispatch();
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
   
   const favorites = useAppSelector(state => state.favorites.items);
+  const { isAuthenticated } = useAppSelector(state => state.auth);
   const isFavorited = favorites.some(fav => fav.id === id);
 
-  const handleFavoriteToggle = () => {
-    if (isFavorited) {
-      dispatch(removeFromFavorites(id));
+  const handleFavoriteToggle = async () => {
+    if (!isAuthenticated) {
+      navigate('/auth');
       toast({
-        title: "Removed from favorites",
-        description: `${name} has been removed from your favorites.`
+        title: "Login Required",
+        description: "Please login to add favorites.",
+        variant: "destructive"
       });
-    } else {
-      dispatch(addToFavorites({ id, name, basePrice, imageUrl, category }));
+      return;
+    }
+
+    try {
+      if (isFavorited) {
+        // Remove from database
+        const { error } = await supabase
+          .from('favorites')
+          .delete()
+          .eq('product_id', id);
+
+        if (error) throw error;
+
+        dispatch(removeFromFavorites(id));
+        toast({
+          title: "Removed from favorites",
+          description: `${name} has been removed from your favorites.`
+        });
+      } else {
+        // Add to database
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('User not authenticated');
+
+        const { error } = await supabase
+          .from('favorites')
+          .insert({ 
+            user_id: user.id,
+            product_id: id 
+          });
+
+        if (error) throw error;
+
+        dispatch(addToFavorites({ id, name, basePrice, imageUrl, category }));
+        toast({
+          title: "Added to favorites",
+          description: `${name} has been added to your favorites.`
+        });
+      }
+    } catch (error: any) {
+      console.error('Error toggling favorite:', error);
       toast({
-        title: "Added to favorites",
-        description: `${name} has been added to your favorites.`
+        title: "Error",
+        description: "Failed to update favorites. Please try again.",
+        variant: "destructive"
       });
     }
   };

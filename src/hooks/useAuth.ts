@@ -1,10 +1,47 @@
 import { useEffect } from 'react';
 import { useAppDispatch } from '@/store/hooks';
 import { setSession, setLoading } from '@/store/slices/authSlice';
+import { setFavorites } from '@/store/slices/favoritesSlice';
 import { supabase } from '@/integrations/supabase/client';
 
 export const useAuth = () => {
   const dispatch = useAppDispatch();
+
+  const fetchAndSyncFavorites = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('favorites')
+        .select(`
+          id,
+          product_id,
+          products (
+            id,
+            name,
+            base_price,
+            image_url,
+            description,
+            categories (
+              name
+            )
+          )
+        `)
+        .eq('user_id', userId);
+
+      if (!error && data) {
+        const formattedFavorites = data.map(fav => ({
+          id: fav.products?.id || '',
+          name: fav.products?.name || '',
+          basePrice: fav.products?.base_price || 0,
+          imageUrl: fav.products?.image_url || '',
+          description: fav.products?.description || '',
+          category: fav.products?.categories?.name || ''
+        }));
+        dispatch(setFavorites(formattedFavorites));
+      }
+    } catch (error) {
+      console.error('Error fetching favorites:', error);
+    }
+  };
 
   useEffect(() => {
     // Set up auth state listener
@@ -29,8 +66,12 @@ export const useAuth = () => {
             };
 
             dispatch(setSession({ session, user: userData }));
+            
+            // Fetch and sync favorites
+            fetchAndSyncFavorites(session.user.id);
           } else {
             dispatch(setSession({ session: null, user: null }));
+            dispatch(setFavorites([])); // Clear favorites on logout
           }
         })();
       }
@@ -53,6 +94,9 @@ export const useAuth = () => {
         };
 
         dispatch(setSession({ session, user: userData }));
+        
+        // Fetch and sync favorites
+        fetchAndSyncFavorites(session.user.id);
       } else {
         dispatch(setLoading(false));
       }

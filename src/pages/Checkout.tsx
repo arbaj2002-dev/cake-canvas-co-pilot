@@ -12,6 +12,8 @@ import Header from "@/components/Header";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useAppDispatch } from "@/store/hooks";
+import { clearCart } from "@/store/slices/cartSlice";
 import {
   Drawer,
   DrawerClose,
@@ -25,6 +27,7 @@ import {
 const Checkout = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const dispatch = useAppDispatch();
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("cod");
   const [selectedAddress, setSelectedAddress] = useState("home");
@@ -317,6 +320,7 @@ const Checkout = () => {
 
       // Clear cart data
       localStorage.removeItem('checkout_data');
+      dispatch(clearCart());
 
       toast({
         title: "Order Placed Successfully! 🎉",
@@ -324,7 +328,7 @@ const Checkout = () => {
       });
       
       // Navigate to profile orders tab
-      navigate('/profile?tab=orders');
+      navigate('/profile?tab=my-orders');
     } catch (error) {
       console.error('Error placing order:', error);
       toast({

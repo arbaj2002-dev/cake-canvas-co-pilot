@@ -109,7 +109,7 @@ const Header = () => {
               variant="ghost"
               size="sm"
               className="text-muted-foreground hover:text-primary transition-smooth"
-              onClick={() => isAuthenticated ? navigate("/profile") : navigate("/auth")}
+              onClick={() => isAuthenticated ? navigate("/profile?tab=favourites") : navigate("/auth")}
             >
               <Heart className="h-5 w-5" />
             </Button>
