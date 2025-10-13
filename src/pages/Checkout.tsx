@@ -212,10 +212,14 @@ const Checkout = () => {
       // Store customer phone for future coupon validation
       localStorage.setItem('customer_phone', customerDetails.phone);
 
+      // Get logged-in user ID
+      const { data: { user } } = await supabase.auth.getUser();
+
       // Create order using correct schema fields
       const { data: order, error: orderError } = await supabase
         .from('orders')
         .insert({
+          customer_id: user?.id || null,
           delivery_name: customerDetails.name,
           delivery_phone: customerDetails.phone,
           delivery_address: deliveryAddress,
