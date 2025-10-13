@@ -9,6 +9,8 @@ export interface CartAddon {
 
 export interface CartItem {
   id: string;
+  productId: string;
+  sizeId: string;
   name: string;
   basePrice: number;
   imageUrl: string;

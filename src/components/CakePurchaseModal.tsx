@@ -141,6 +141,8 @@ export const CakePurchaseModal = ({ isOpen, onClose, cake }: CakePurchaseModalPr
 
     const cartItem = {
       id: `${cake.id}-${selectedSize.id}-${Date.now()}`,
+      productId: cake.id,
+      sizeId: selectedSize.id,
       name: cake.name,
       basePrice: cake.basePrice * (selectedSize.price_multiplier || 1),
       imageUrl: cake.imageUrl,

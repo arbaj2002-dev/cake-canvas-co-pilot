@@ -239,7 +239,8 @@ const Checkout = () => {
           .from('order_items')
           .insert({
             order_id: order.id,
-            product_id: item.id,
+            product_id: item.productId,
+            product_size_id: item.sizeId,
             quantity: item.quantity,
             unit_price: item.basePrice,
             custom_message: item.customMessage || null
