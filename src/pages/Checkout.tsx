@@ -212,21 +212,14 @@ const Checkout = () => {
       // Store customer phone for future coupon validation
       localStorage.setItem('customer_phone', customerDetails.phone);
 
-      // Get current user ID
-      const { data: { user: currentUser } } = await supabase.auth.getUser();
-
-      // Create order directly without customer table dependency
+      // Create order using correct schema fields
       const { data: order, error: orderError } = await supabase
         .from('orders')
         .insert({
-          user_id: currentUser?.id || null,
-          customer_name: customerDetails.name,
-          customer_phone: customerDetails.phone,
-          customer_email: customerDetails.email || null,
+          delivery_name: customerDetails.name,
+          delivery_phone: customerDetails.phone,
           delivery_address: deliveryAddress,
-          delivery_date: deliveryInfo.date,
-          delivery_time: deliveryInfo.time || '',
-          special_instructions: deliveryInfo.instructions || null,
+          order_notes: `Delivery Date: ${deliveryInfo.date}${deliveryInfo.time ? ', Time: ' + deliveryInfo.time : ''}${deliveryInfo.instructions ? ', Instructions: ' + deliveryInfo.instructions : ''}`,
           total_amount: orderSummary.total,
           payment_method: paymentMethod,
           payment_status: paymentMethod === 'cod' ? 'pending' : 'completed',
