@@ -205,68 +205,21 @@ const Checkout = () => {
 
     try {
       // Prepare delivery address
-      const deliveryAddress = selectedAddress === 'new' 
+      const deliveryAddress = selectedAddress === 'new'
         ? `${newAddress.street}, ${newAddress.city}, ${newAddress.pincode}${newAddress.landmark ? ', Near ' + newAddress.landmark : ''}`
         : savedAddresses.find(addr => addr.id === selectedAddress)?.address || '';
-
-      // Check if customer already exists
-      let customerId = null;
-      const { data: existingCustomer } = await supabase
-        .from('customers')
-        .select('id')
-        .eq('phone', customerDetails.phone)
-        .single();
-
-      if (existingCustomer) {
-        customerId = existingCustomer.id;
-        // Update customer details
-        await supabase
-          .from('customers')
-          .update({
-            name: customerDetails.name,
-            email: customerDetails.email || null,
-            address: deliveryAddress
-          })
-          .eq('id', customerId);
-      } else {
-        // Create new customer
-        const { data: newCustomer, error: customerError } = await supabase
-          .from('customers')
-          .insert({
-            name: customerDetails.name,
-            phone: customerDetails.phone,
-            email: customerDetails.email || null,
-            address: deliveryAddress
-          })
-          .select('id')
-          .single();
-
-        if (customerError) {
-          console.error('Error creating customer:', customerError);
-          throw customerError;
-        }
-        customerId = newCustomer.id;
-      }
 
       // Store customer phone for future coupon validation
       localStorage.setItem('customer_phone', customerDetails.phone);
 
-      // Prepare order notes with delivery preferences
-      const orderNotes = [
-        deliveryInfo.instructions,
-        deliveryInfo.time ? `Preferred time: ${deliveryInfo.time}` : '',
-        deliveryInfo.date ? `Delivery date: ${deliveryInfo.date}` : ''
-      ].filter(Boolean).join('\n');
-
       // Get current user ID
       const { data: { user: currentUser } } = await supabase.auth.getUser();
 
-      // Create order
+      // Create order directly without customer table dependency
       const { data: order, error: orderError } = await supabase
         .from('orders')
         .insert({
           user_id: currentUser?.id || null,
-          customer_id: customerId,
           customer_name: customerDetails.name,
           customer_phone: customerDetails.phone,
           customer_email: customerDetails.email || null,

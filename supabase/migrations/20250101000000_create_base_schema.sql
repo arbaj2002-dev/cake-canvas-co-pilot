@@ -90,7 +90,6 @@ CREATE TABLE IF NOT EXISTS public.customers (
 CREATE TABLE IF NOT EXISTS public.orders (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
-  customer_id UUID REFERENCES public.customers(id) ON DELETE SET NULL,
   customer_name TEXT NOT NULL,
   customer_phone TEXT NOT NULL,
   customer_email TEXT,
@@ -102,9 +101,6 @@ CREATE TABLE IF NOT EXISTS public.orders (
   payment_method TEXT NOT NULL DEFAULT 'cod',
   payment_status TEXT NOT NULL DEFAULT 'pending',
   status TEXT NOT NULL DEFAULT 'pending',
-  delivery_name TEXT,
-  delivery_phone TEXT,
-  order_notes TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -137,8 +133,8 @@ CREATE INDEX IF NOT EXISTS idx_products_is_active ON public.products(is_active);
 CREATE INDEX IF NOT EXISTS idx_products_is_featured ON public.products(is_featured);
 CREATE INDEX IF NOT EXISTS idx_product_sizes_product_id ON public.product_sizes(product_id);
 CREATE INDEX IF NOT EXISTS idx_orders_user_id ON public.orders(user_id);
-CREATE INDEX IF NOT EXISTS idx_orders_customer_id ON public.orders(customer_id);
 CREATE INDEX IF NOT EXISTS idx_orders_status ON public.orders(status);
+CREATE INDEX IF NOT EXISTS idx_orders_customer_phone ON public.orders(customer_phone);
 CREATE INDEX IF NOT EXISTS idx_order_items_order_id ON public.order_items(order_id);
 CREATE INDEX IF NOT EXISTS idx_order_addons_order_item_id ON public.order_addons(order_item_id);
 
@@ -172,27 +168,19 @@ CREATE POLICY "Active addons are viewable by everyone"
 ON public.addons FOR SELECT
 USING (is_active = true OR auth.role() = 'authenticated');
 
--- Customers policies
-CREATE POLICY "Users can view their own customer record"
+-- Customers policies (optional table for future use)
+CREATE POLICY "Anyone can view customer records"
 ON public.customers FOR SELECT
-TO authenticated
-USING (phone IN (
-  SELECT phone FROM public.profiles WHERE user_id = auth.uid()
-));
+USING (true);
 
 CREATE POLICY "Anyone can create customer records"
 ON public.customers FOR INSERT
 WITH CHECK (true);
 
-CREATE POLICY "Users can update their own customer record"
+CREATE POLICY "Anyone can update customer records"
 ON public.customers FOR UPDATE
-TO authenticated
-USING (phone IN (
-  SELECT phone FROM public.profiles WHERE user_id = auth.uid()
-))
-WITH CHECK (phone IN (
-  SELECT phone FROM public.profiles WHERE user_id = auth.uid()
-));
+USING (true)
+WITH CHECK (true);
 
 -- Orders policies
 CREATE POLICY "Users can view their own orders"
