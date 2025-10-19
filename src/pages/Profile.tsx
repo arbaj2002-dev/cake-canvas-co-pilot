@@ -14,21 +14,24 @@ import { useAppSelector, useAppDispatch } from "@/store/hooks";
 import { useSearchParams } from "react-router-dom";
 import CakeCard from "@/components/CakeCard";
 import { setFavorites } from "@/store/slices/favoritesSlice";
+import { setSession } from "@/store/slices/authSlice";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const Profile = () => {
   const { toast } = useToast();
   const dispatch = useAppDispatch();
   const [searchParams, setSearchParams] = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
+  const [profileLoading, setProfileLoading] = useState(true);
   const [showPasswordReset, setShowPasswordReset] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
-  const { user, isAuthenticated } = useAppSelector(state => state.auth);
+  const { user, isAuthenticated, session } = useAppSelector(state => state.auth);
   
   // User profile data
   const [userProfile, setUserProfile] = useState({
-    name: user?.name || "",
-    phone: user?.phone || "",
-    email: user?.email || "",
+    name: "",
+    phone: "",
+    email: "",
     address: ""
   });
 
@@ -45,16 +48,42 @@ const Profile = () => {
 
   useEffect(() => {
     if (isAuthenticated && user) {
-      setUserProfile({
-        name: user.name || "",
-        phone: user.phone || "",
-        email: user.email || "",
-        address: ""
-      });
+      fetchUserProfile();
       fetchUserOrders();
       fetchFavoriteCakes();
     }
   }, [isAuthenticated, user]);
+
+  const fetchUserProfile = async () => {
+    if (!user?.id) return;
+    
+    setProfileLoading(true);
+    try {
+      const { data: authUser } = await supabase.auth.getUser();
+      
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('full_name, phone')
+        .eq('user_id', user.id)
+        .single();
+
+      if (error) {
+        console.error('Error fetching profile:', error);
+        return;
+      }
+
+      setUserProfile({
+        name: data?.full_name || "",
+        phone: data?.phone || "",
+        email: authUser.user?.email || "",
+        address: ""
+      });
+    } catch (error) {
+      console.error('Error:', error);
+    } finally {
+      setProfileLoading(false);
+    }
+  };
 
   const fetchFavoriteCakes = async () => {
     setFavoritesLoading(true);
@@ -161,15 +190,50 @@ const Profile = () => {
     }
   };
 
-  const handleUpdateProfile = () => {
+  const handleUpdateProfile = async () => {
+    if (!user?.id) return;
+    
     setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          full_name: userProfile.name,
+        })
+        .eq('user_id', user.id);
+
+      if (error) {
+        toast({
+          title: "Error",
+          description: "Failed to update profile. Please try again.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Update authSlice with new user data
+      dispatch(setSession({
+        session,
+        user: {
+          ...user,
+          name: userProfile.name,
+        }
+      }));
+
       toast({
         title: "Profile Updated",
         description: "Your profile has been updated successfully.",
       });
-    }, 1000);
+    } catch (error) {
+      console.error('Error:', error);
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handlePasswordReset = () => {
@@ -232,65 +296,85 @@ const Profile = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="name">Full Name</Label>
-                      <Input 
-                        id="name" 
-                        value={userProfile.name}
-                        onChange={(e) => setUserProfile({...userProfile, name: e.target.value})}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="phone">Phone Number</Label>
-                      <div className="flex">
-                        <Button variant="outline" size="sm" className="rounded-r-none px-3">
-                          +91
-                        </Button>
-                        <Input 
-                          id="phone" 
-                          value={userProfile.phone.replace('+91 ', '')}
-                          onChange={(e) => setUserProfile({...userProfile, phone: `+91 ${e.target.value}`})}
-                          className="rounded-l-none"
-                        />
+                  {profileLoading ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Skeleton className="h-4 w-20" />
+                        <Skeleton className="h-10 w-full" />
+                      </div>
+                      <div className="space-y-2">
+                        <Skeleton className="h-4 w-28" />
+                        <Skeleton className="h-10 w-full" />
+                      </div>
+                      <div className="space-y-2">
+                        <Skeleton className="h-4 w-24" />
+                        <Skeleton className="h-10 w-full" />
+                      </div>
+                      <div className="space-y-2">
+                        <Skeleton className="h-4 w-16" />
+                        <Skeleton className="h-10 w-full" />
                       </div>
                     </div>
-                    <div>
-                      <Label htmlFor="email">Email Address</Label>
-                      <Input 
-                        id="email" 
-                        type="email"
-                        value={userProfile.email}
-                        onChange={(e) => setUserProfile({...userProfile, email: e.target.value})}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="address">Address</Label>
-                      <Input 
-                        id="address" 
-                        value={userProfile.address}
-                        onChange={(e) => setUserProfile({...userProfile, address: e.target.value})}
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="flex gap-3 pt-4">
-                    <Button 
-                      onClick={handleUpdateProfile}
-                      disabled={isLoading}
-                      className="bg-gradient-button shadow-button"
-                    >
-                      {isLoading && <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />}
-                      Update Profile
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      onClick={() => setShowPasswordReset(true)}
-                    >
-                      <Lock className="h-4 w-4 mr-2" />
-                      Reset Password
-                    </Button>
-                  </div>
+                  ) : (
+                    <>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <Label htmlFor="name">Full Name</Label>
+                          <Input 
+                            id="name" 
+                            value={userProfile.name}
+                            onChange={(e) => setUserProfile({...userProfile, name: e.target.value})}
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="phone">Phone Number</Label>
+                          <Input 
+                            id="phone" 
+                            value={userProfile.phone}
+                            disabled
+                            className="bg-muted cursor-not-allowed"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="email">Email Address</Label>
+                          <Input 
+                            id="email" 
+                            type="email"
+                            value={userProfile.email}
+                            disabled
+                            className="bg-muted cursor-not-allowed"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="address">Address</Label>
+                          <Input 
+                            id="address" 
+                            value={userProfile.address}
+                            onChange={(e) => setUserProfile({...userProfile, address: e.target.value})}
+                            placeholder="Enter your address"
+                          />
+                        </div>
+                      </div>
+                      
+                      <div className="flex gap-3 pt-4">
+                        <Button 
+                          onClick={handleUpdateProfile}
+                          disabled={isLoading}
+                          className="bg-gradient-button shadow-button"
+                        >
+                          {isLoading && <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />}
+                          Update Profile
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          onClick={() => setShowPasswordReset(true)}
+                        >
+                          <Lock className="h-4 w-4 mr-2" />
+                          Reset Password
+                        </Button>
+                      </div>
+                    </>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
