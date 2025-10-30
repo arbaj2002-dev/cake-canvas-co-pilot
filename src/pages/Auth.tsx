@@ -42,6 +42,7 @@ const Auth = () => {
   const [registerForm, setRegisterForm] = useState({
     name: "",
     email: "",
+    phone: "",
     password: "",
     confirmPassword: ""
   });
@@ -196,7 +197,7 @@ const Auth = () => {
     setLoading(true);
     
     // Validation
-    if (!registerForm.name || !registerForm.email || !registerForm.password || !registerForm.confirmPassword) {
+    if (!registerForm.name || !registerForm.email || !registerForm.phone || !registerForm.password || !registerForm.confirmPassword) {
       toast({
         title: "Please fill all fields",
         variant: "destructive"
@@ -209,6 +210,18 @@ const Auth = () => {
       toast({
         title: "Invalid email",
         description: "Please enter a valid email address",
+        variant: "destructive"
+      });
+      setLoading(false);
+      return;
+    }
+
+    // Validate phone number (at least 10 digits)
+    const phoneDigits = registerForm.phone.replace(/\D/g, '');
+    if (phoneDigits.length < 10) {
+      toast({
+        title: "Invalid phone number",
+        description: "Phone number must have at least 10 digits",
         variant: "destructive"
       });
       setLoading(false);
@@ -244,6 +257,7 @@ const Auth = () => {
           emailRedirectTo: redirectUrl,
           data: {
             full_name: registerForm.name,
+            phone: `+91${registerForm.phone}`
           }
         }
       });
@@ -262,7 +276,7 @@ const Auth = () => {
           id: data.user.id,
           name: registerForm.name,
           email: data.user.email || '',
-          phone: ''
+          phone: `+91${registerForm.phone}`
         };
 
         dispatch(setSession({ session: data.session, user: userData }));
@@ -428,6 +442,26 @@ const Auth = () => {
                         value={registerForm.email}
                         onChange={(e) => setRegisterForm({ ...registerForm, email: e.target.value })}
                       />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="register-phone">Phone Number</Label>
+                      <div className="flex gap-2">
+                        <div className="flex items-center px-3 py-2 border border-input rounded-md bg-muted text-sm">
+                          +91
+                        </div>
+                        <Input
+                          id="register-phone"
+                          type="tel"
+                          placeholder="Enter your phone number"
+                          value={registerForm.phone}
+                          onChange={(e) => {
+                            const value = e.target.value.replace(/\D/g, '');
+                            setRegisterForm({ ...registerForm, phone: value });
+                          }}
+                          maxLength={10}
+                        />
+                      </div>
                     </div>
                     
                     <div className="space-y-2">
