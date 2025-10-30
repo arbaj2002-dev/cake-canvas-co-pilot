@@ -63,7 +63,7 @@ const Profile = () => {
       
       const { data, error } = await supabase
         .from('profiles')
-        .select('full_name, phone')
+        .select('full_name, phone, address')
         .eq('user_id', user.id)
         .single();
 
@@ -76,7 +76,7 @@ const Profile = () => {
         name: data?.full_name || "",
         phone: data?.phone || "",
         email: authUser.user?.email || "",
-        address: ""
+        address: data?.address || ""
       });
     } catch (error) {
       console.error('Error:', error);
@@ -199,6 +199,7 @@ const Profile = () => {
         .from('profiles')
         .update({
           full_name: userProfile.name,
+          address: userProfile.address
         })
         .eq('user_id', user.id);
 
@@ -236,12 +237,36 @@ const Profile = () => {
     }
   };
 
-  const handlePasswordReset = () => {
-    toast({
-      title: "Password Reset Link Sent",
-      description: "Check your email for password reset instructions.",
-    });
-    setShowPasswordReset(false);
+  const handlePasswordReset = async () => {
+    if (!user?.email) {
+      toast({
+        title: "Error",
+        description: "User email not found",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
+        redirectTo: `${window.location.origin}/auth`
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Password Reset Link Sent",
+        description: "Check your email for password reset instructions.",
+      });
+      setShowPasswordReset(false);
+    } catch (error) {
+      console.error('Error sending password reset:', error);
+      toast({
+        title: "Error",
+        description: "Failed to send password reset email. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   const refetchOrders = () => {
