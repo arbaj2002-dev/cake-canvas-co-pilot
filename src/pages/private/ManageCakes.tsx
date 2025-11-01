@@ -1,9 +1,11 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import {
   Table,
   TableBody,
@@ -19,9 +21,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, RefreshCw, Search } from "lucide-react";
+import { ArrowLeft, RefreshCw, Search, Plus, Pencil, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
 import {
   Pagination,
   PaginationContent,
@@ -31,15 +42,41 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
 
 const ITEMS_PER_PAGE = 10;
 
+interface CakeFormData {
+  name: string;
+  description: string;
+  base_price: string;
+  category_id: string;
+  is_active: boolean;
+  is_featured: boolean;
+  image_file: File | null;
+}
+
 const ManageCakes = () => {
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingCake, setEditingCake] = useState<any>(null);
+  const [imagePreview, setImagePreview] = useState<string>("");
+  
+  const [formData, setFormData] = useState<CakeFormData>({
+    name: "",
+    description: "",
+    base_price: "",
+    category_id: "",
+    is_active: true,
+    is_featured: false,
+    image_file: null,
+  });
 
   const { data: categories } = useQuery({
     queryKey: ["categories"],
@@ -85,15 +122,186 @@ const ManageCakes = () => {
 
   const totalPages = Math.ceil((data?.count || 0) / ITEMS_PER_PAGE);
 
+  const uploadImage = async (file: File): Promise<string> => {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Math.random()}.${fileExt}`;
+    const filePath = `${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('cakes')
+      .upload(filePath, file);
+
+    if (uploadError) throw uploadError;
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('cakes')
+      .getPublicUrl(filePath);
+
+    return publicUrl;
+  };
+
+  const deleteOldImage = async (imageUrl: string) => {
+    if (!imageUrl) return;
+    
+    try {
+      const urlParts = imageUrl.split('/cakes/');
+      if (urlParts.length !== 2) return;
+      
+      const filePath = urlParts[1];
+      await supabase.storage.from('cakes').remove([filePath]);
+    } catch (error) {
+      console.error('Error deleting old image:', error);
+    }
+  };
+
+  const saveMutation = useMutation({
+    mutationFn: async (data: CakeFormData) => {
+      let imageUrl = editingCake?.image_url || "";
+
+      // Upload new image if provided
+      if (data.image_file) {
+        // Delete old image if updating
+        if (editingCake?.image_url) {
+          await deleteOldImage(editingCake.image_url);
+        }
+        imageUrl = await uploadImage(data.image_file);
+      }
+
+      const productData = {
+        name: data.name,
+        description: data.description,
+        base_price: parseFloat(data.base_price),
+        category_id: data.category_id || null,
+        is_active: data.is_active,
+        is_featured: data.is_featured,
+        image_url: imageUrl,
+      };
+
+      if (editingCake) {
+        const { error } = await supabase
+          .from("products")
+          .update(productData)
+          .eq("id", editingCake.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("products")
+          .insert([productData]);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: `Cake ${editingCake ? "updated" : "created"} successfully`,
+      });
+      setIsDialogOpen(false);
+      resetForm();
+      queryClient.invalidateQueries({ queryKey: ["admin-products"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || `Failed to ${editingCake ? "update" : "create"} cake`,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (product: any) => {
+      // Delete image from storage
+      if (product.image_url) {
+        await deleteOldImage(product.image_url);
+      }
+
+      const { error } = await supabase
+        .from("products")
+        .delete()
+        .eq("id", product.id);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast({
+        title: "Success",
+        description: "Cake deleted successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ["admin-products"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete cake",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleEdit = (product: any) => {
+    setEditingCake(product);
+    setFormData({
+      name: product.name,
+      description: product.description || "",
+      base_price: product.base_price.toString(),
+      category_id: product.category_id || "",
+      is_active: product.is_active,
+      is_featured: product.is_featured,
+      image_file: null,
+    });
+    setImagePreview(product.image_url || "");
+    setIsDialogOpen(true);
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setFormData({ ...formData, image_file: file });
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const resetForm = () => {
+    setFormData({
+      name: "",
+      description: "",
+      base_price: "",
+      category_id: "",
+      is_active: true,
+      is_featured: false,
+      image_file: null,
+    });
+    setImagePreview("");
+    setEditingCake(null);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    saveMutation.mutate(formData);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-hero">
       <div className="container mx-auto px-4 py-8">
-        <div className="flex items-center gap-4 mb-6">
-          <Button variant="outline" onClick={() => navigate("/private/dashboard")}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-4">
+            <Button variant="outline" onClick={() => navigate("/private/dashboard")}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back
+            </Button>
+            <h1 className="hero-text text-3xl">Manage Cakes</h1>
+          </div>
+          <Button onClick={() => {
+            resetForm();
+            setIsDialogOpen(true);
+          }}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Cake
           </Button>
-          <h1 className="hero-text text-3xl">Manage Cakes</h1>
         </div>
 
         <Card>
@@ -176,7 +384,7 @@ const ManageCakes = () => {
                         <TableHead>Base Price</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Featured</TableHead>
-                        <TableHead>Created</TableHead>
+                        <TableHead>Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -218,7 +426,26 @@ const ManageCakes = () => {
                               </Badge>
                             </TableCell>
                             <TableCell>
-                              {new Date(product.created_at).toLocaleDateString()}
+                              <div className="flex gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleEdit(product)}
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="destructive"
+                                  size="sm"
+                                  onClick={() => {
+                                    if (confirm("Are you sure you want to delete this cake?")) {
+                                      deleteMutation.mutate(product);
+                                    }
+                                  }}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
                             </TableCell>
                           </TableRow>
                         ))
@@ -263,6 +490,128 @@ const ManageCakes = () => {
           </CardContent>
         </Card>
       </div>
+
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{editingCake ? "Edit Cake" : "Add New Cake"}</DialogTitle>
+            <DialogDescription>
+              {editingCake ? "Update cake information" : "Create a new cake product"}
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleSubmit}>
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="name">Name *</Label>
+                <Input
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  required
+                />
+              </div>
+              
+              <div className="grid gap-2">
+                <Label htmlFor="description">Description</Label>
+                <Textarea
+                  id="description"
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  rows={3}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="base_price">Base Price (₹) *</Label>
+                  <Input
+                    id="base_price"
+                    type="number"
+                    step="0.01"
+                    value={formData.base_price}
+                    onChange={(e) => setFormData({ ...formData, base_price: e.target.value })}
+                    required
+                  />
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="category_id">Category</Label>
+                  <Select
+                    value={formData.category_id}
+                    onValueChange={(value) => setFormData({ ...formData, category_id: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories?.map((cat) => (
+                        <SelectItem key={cat.id} value={cat.id}>
+                          {cat.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="image">Image</Label>
+                <Input
+                  id="image"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageChange}
+                />
+                {imagePreview && (
+                  <div className="mt-2">
+                    <img
+                      src={imagePreview}
+                      alt="Preview"
+                      className="w-full h-48 object-cover rounded"
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="is_active"
+                    checked={formData.is_active}
+                    onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
+                  />
+                  <Label htmlFor="is_active">Active</Label>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Switch
+                    id="is_featured"
+                    checked={formData.is_featured}
+                    onCheckedChange={(checked) => setFormData({ ...formData, is_featured: checked })}
+                  />
+                  <Label htmlFor="is_featured">Featured</Label>
+                </div>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setIsDialogOpen(false);
+                  resetForm();
+                }}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={saveMutation.isPending}>
+                {saveMutation.isPending ? "Saving..." : editingCake ? "Update" : "Create"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
