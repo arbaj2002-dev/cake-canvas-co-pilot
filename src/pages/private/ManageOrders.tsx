@@ -47,7 +47,7 @@ const ManageOrders = () => {
     queryFn: async () => {
       let query = supabase
         .from("orders")
-        .select("*, customers(name, phone, email)", { count: "exact" })
+        .select("*", { count: "exact" })
         .order("created_at", { ascending: false })
         .range((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE - 1);
 
