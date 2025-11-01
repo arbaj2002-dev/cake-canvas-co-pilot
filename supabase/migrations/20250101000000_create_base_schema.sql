@@ -60,7 +60,7 @@ CREATE TABLE IF NOT EXISTS public.product_sizes (
   product_id UUID NOT NULL REFERENCES public.products(id) ON DELETE CASCADE,
   size_name TEXT NOT NULL,
   weight TEXT,
-  price_multiplier DECIMAL(5, 2) NOT NULL DEFAULT 1.0,
+  price DECIMAL(10, 2) NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 

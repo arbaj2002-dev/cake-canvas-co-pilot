@@ -30,7 +30,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, RefreshCw, Search, Plus, Pencil, Trash2 } from "lucide-react";
+import { ArrowLeft, RefreshCw, Search, Plus, Pencil, Trash2, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -56,6 +56,14 @@ interface CakeFormData {
   image_file: File | null;
 }
 
+interface ProductSize {
+  id?: string;
+  size_name: string;
+  weight: string;
+  price: string;
+  isNew?: boolean;
+}
+
 const ManageCakes = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -67,7 +75,8 @@ const ManageCakes = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCake, setEditingCake] = useState<any>(null);
   const [imagePreview, setImagePreview] = useState<string>("");
-  
+  const [productSizes, setProductSizes] = useState<ProductSize[]>([]);
+
   const [formData, setFormData] = useState<CakeFormData>({
     name: "",
     description: "",
@@ -158,9 +167,7 @@ const ManageCakes = () => {
     mutationFn: async (data: CakeFormData) => {
       let imageUrl = editingCake?.image_url || "";
 
-      // Upload new image if provided
       if (data.image_file) {
-        // Delete old image if updating
         if (editingCake?.image_url) {
           await deleteOldImage(editingCake.image_url);
         }
@@ -177,6 +184,8 @@ const ManageCakes = () => {
         image_url: imageUrl,
       };
 
+      let productId = editingCake?.id;
+
       if (editingCake) {
         const { error } = await supabase
           .from("products")
@@ -184,10 +193,29 @@ const ManageCakes = () => {
           .eq("id", editingCake.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase
+        const { data: newProduct, error } = await supabase
           .from("products")
-          .insert([productData]);
+          .insert([productData])
+          .select();
         if (error) throw error;
+        productId = newProduct[0].id;
+      }
+
+      if (productId && productSizes.length > 0) {
+        const newSizes = productSizes.filter(s => s.isNew);
+        if (newSizes.length > 0) {
+          const sizesToInsert = newSizes.map(s => ({
+            product_id: productId,
+            size_name: s.size_name,
+            weight: s.weight,
+            price: parseFloat(s.price),
+          }));
+
+          const { error } = await supabase
+            .from("product_sizes")
+            .insert(sizesToInsert);
+          if (error) throw error;
+        }
       }
     },
     onSuccess: () => {
@@ -238,7 +266,7 @@ const ManageCakes = () => {
     },
   });
 
-  const handleEdit = (product: any) => {
+  const handleEdit = async (product: any) => {
     setEditingCake(product);
     setFormData({
       name: product.name,
@@ -250,6 +278,20 @@ const ManageCakes = () => {
       image_file: null,
     });
     setImagePreview(product.image_url || "");
+
+    const { data: sizes } = await supabase
+      .from("product_sizes")
+      .select("*")
+      .eq("product_id", product.id);
+
+    setProductSizes(
+      sizes?.map(s => ({
+        id: s.id,
+        size_name: s.size_name,
+        weight: s.weight,
+        price: s.price.toString(),
+      })) || []
+    );
     setIsDialogOpen(true);
   };
 
@@ -277,6 +319,7 @@ const ManageCakes = () => {
     });
     setImagePreview("");
     setEditingCake(null);
+    setProductSizes([]);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -590,6 +633,85 @@ const ManageCakes = () => {
                     onCheckedChange={(checked) => setFormData({ ...formData, is_featured: checked })}
                   />
                   <Label htmlFor="is_featured">Featured</Label>
+                </div>
+              </div>
+
+              <div className="grid gap-2 border-t pt-4">
+                <div className="flex items-center justify-between">
+                  <Label>Product Sizes</Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setProductSizes([
+                        ...productSizes,
+                        { size_name: "", weight: "", price: "", isNew: true }
+                      ]);
+                    }}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Size
+                  </Button>
+                </div>
+
+                <div className="space-y-3 max-h-64 overflow-y-auto">
+                  {productSizes.map((size, idx) => (
+                    <div key={idx} className="flex gap-2 items-end p-3 border rounded-lg bg-muted/30">
+                      <div className="flex-1">
+                        <Label className="text-xs">Size Name</Label>
+                        <Input
+                          placeholder="e.g., Small (500g)"
+                          value={size.size_name}
+                          onChange={(e) => {
+                            const updated = [...productSizes];
+                            updated[idx].size_name = e.target.value;
+                            setProductSizes(updated);
+                          }}
+                          className="mt-1"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <Label className="text-xs">Weight</Label>
+                        <Input
+                          placeholder="e.g., 500g, 1kg"
+                          value={size.weight}
+                          onChange={(e) => {
+                            const updated = [...productSizes];
+                            updated[idx].weight = e.target.value;
+                            setProductSizes(updated);
+                          }}
+                          className="mt-1"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <Label className="text-xs">Price (₹)</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          placeholder="899"
+                          value={size.price}
+                          onChange={(e) => {
+                            const updated = [...productSizes];
+                            updated[idx].price = e.target.value;
+                            setProductSizes(updated);
+                          }}
+                          className="mt-1"
+                        />
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setProductSizes(productSizes.filter((_, i) => i !== idx));
+                        }}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
