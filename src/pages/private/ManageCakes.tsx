@@ -104,7 +104,7 @@ const ManageCakes = () => {
     queryFn: async () => {
       let query = supabase
         .from("products")
-        .select("*, categories(name)", { count: "exact" })
+        .select("*, categories(name), product_sizes(id, size_name, weight, price_multiplier)", { count: "exact" })
         .order("created_at", { ascending: false })
         .range((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE - 1);
 
@@ -288,8 +288,8 @@ const ManageCakes = () => {
       sizes?.map(s => ({
         id: s.id,
         size_name: s.size_name,
-        weight: s.weight,
-        price: s.price.toString(),
+        weight: s.weight || "",
+        price: (parseFloat(product.base_price.toString()) * (s.price_multiplier || 1)).toString(),
       })) || []
     );
     setIsDialogOpen(true);
@@ -418,22 +418,23 @@ const ManageCakes = () => {
             ) : (
               <>
                 <div className="rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Image</TableHead>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Category</TableHead>
-                        <TableHead>Base Price</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Featured</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Image</TableHead>
+                          <TableHead>Name</TableHead>
+                          <TableHead>Category</TableHead>
+                          <TableHead>Base Price</TableHead>
+                          <TableHead>Sizes</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Featured</TableHead>
+                          <TableHead>Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
                     <TableBody>
                       {data?.products.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={7} className="text-center text-muted-foreground">
+                          <TableCell colSpan={8} className="text-center text-muted-foreground">
                             No products found
                           </TableCell>
                         </TableRow>
@@ -458,6 +459,19 @@ const ManageCakes = () => {
                               {product.categories?.name || "Uncategorized"}
                             </TableCell>
                             <TableCell>₹{product.base_price}</TableCell>
+                            <TableCell>
+                              {product.product_sizes && product.product_sizes.length > 0 ? (
+                                <div className="flex flex-wrap gap-1">
+                                  {product.product_sizes.map((size: any, idx: number) => (
+                                    <Badge key={idx} variant="outline" className="text-xs">
+                                      {size.size_name}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              ) : (
+                                <span className="text-xs text-muted-foreground">No sizes</span>
+                              )}
+                            </TableCell>
                             <TableCell>
                               <Badge variant={product.is_active ? "default" : "secondary"}>
                                 {product.is_active ? "Active" : "Inactive"}

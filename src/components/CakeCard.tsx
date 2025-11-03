@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Heart, Star, ShoppingCart } from "lucide-react";
+import { Heart, Star, ShoppingCart, Package } from "lucide-react";
 import { CakePurchaseModal } from "./CakePurchaseModal";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { addToFavorites, removeFromFavorites } from "@/store/slices/favoritesSlice";
@@ -20,15 +20,43 @@ interface CakeCardProps {
   isFeature?: boolean;
 }
 
+interface ProductSize {
+  id: string;
+  size_name: string;
+  weight: string | null;
+  price_multiplier: number;
+}
+
 const CakeCard = ({ id, name, description, basePrice, imageUrl, category, isFeature }: CakeCardProps) => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
+  const [sizes, setSizes] = useState<ProductSize[]>([]);
   
   const favorites = useAppSelector(state => state.favorites.items);
   const { isAuthenticated } = useAppSelector(state => state.auth);
   const isFavorited = favorites.some(fav => fav.id === id);
+
+  useEffect(() => {
+    fetchSizes();
+  }, [id]);
+
+  const fetchSizes = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('product_sizes')
+        .select('id, size_name, weight, price_multiplier')
+        .eq('product_id', id)
+        .order('price_multiplier');
+
+      if (!error && data) {
+        setSizes(data);
+      }
+    } catch (error) {
+      console.error('Error fetching sizes:', error);
+    }
+  };
 
   const handleFavoriteToggle = async () => {
     if (!isAuthenticated) {
@@ -131,7 +159,29 @@ const CakeCard = ({ id, name, description, basePrice, imageUrl, category, isFeat
             <p className="text-muted-foreground text-sm mb-3 line-clamp-2">
               {description || "Delicious handcrafted cake made with premium ingredients"}
             </p>
-            <p className="text-2xl font-bold text-primary mb-4">₹{basePrice}</p>
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-2xl font-bold text-primary">₹{basePrice}</p>
+              {sizes.length > 0 && (
+                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <Package className="h-3 w-3" />
+                  <span>{sizes.length} size{sizes.length > 1 ? 's' : ''}</span>
+                </div>
+              )}
+            </div>
+            {sizes.length > 0 && (
+              <div className="flex flex-wrap gap-1 mb-3">
+                {sizes.slice(0, 3).map((size) => (
+                  <Badge key={size.id} variant="outline" className="text-xs">
+                    {size.size_name}
+                  </Badge>
+                ))}
+                {sizes.length > 3 && (
+                  <Badge variant="outline" className="text-xs">
+                    +{sizes.length - 3} more
+                  </Badge>
+                )}
+              </div>
+            )}
           </div>
         </CardContent>
         
