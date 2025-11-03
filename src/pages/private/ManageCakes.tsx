@@ -49,7 +49,6 @@ const ITEMS_PER_PAGE = 10;
 interface CakeFormData {
   name: string;
   description: string;
-  base_price: string;
   category_id: string;
   is_active: boolean;
   is_featured: boolean;
@@ -80,7 +79,6 @@ const ManageCakes = () => {
   const [formData, setFormData] = useState<CakeFormData>({
     name: "",
     description: "",
-    base_price: "",
     category_id: "",
     is_active: true,
     is_featured: false,
@@ -165,6 +163,11 @@ const ManageCakes = () => {
 
   const saveMutation = useMutation({
     mutationFn: async (data: CakeFormData) => {
+      // Validate that at least one size exists
+      if (productSizes.length === 0) {
+        throw new Error("Please add at least one product size");
+      }
+
       let imageUrl = editingCake?.image_url || "";
 
       if (data.image_file) {
@@ -174,10 +177,13 @@ const ManageCakes = () => {
         imageUrl = await uploadImage(data.image_file);
       }
 
+      // Calculate base_price as 1 (we'll use price_multiplier as absolute price)
+      const basePrice = 1;
+
       const productData = {
         name: data.name,
         description: data.description,
-        base_price: parseFloat(data.base_price),
+        base_price: basePrice,
         category_id: data.category_id || null,
         is_active: data.is_active,
         is_featured: data.is_featured,
@@ -208,7 +214,7 @@ const ManageCakes = () => {
             product_id: productId,
             size_name: s.size_name,
             weight: s.weight,
-            price: parseFloat(s.price),
+            price_multiplier: parseFloat(s.price), // Store absolute price as multiplier
           }));
 
           const { error } = await supabase
@@ -271,7 +277,6 @@ const ManageCakes = () => {
     setFormData({
       name: product.name,
       description: product.description || "",
-      base_price: product.base_price.toString(),
       category_id: product.category_id || "",
       is_active: product.is_active,
       is_featured: product.is_featured,
@@ -289,7 +294,7 @@ const ManageCakes = () => {
         id: s.id,
         size_name: s.size_name,
         weight: s.weight || "",
-        price: (parseFloat(product.base_price.toString()) * (s.price_multiplier || 1)).toString(),
+        price: (s.price_multiplier || 0).toString(), // Use price_multiplier as absolute price
       })) || []
     );
     setIsDialogOpen(true);
@@ -311,7 +316,6 @@ const ManageCakes = () => {
     setFormData({
       name: "",
       description: "",
-      base_price: "",
       category_id: "",
       is_active: true,
       is_featured: false,
@@ -421,20 +425,19 @@ const ManageCakes = () => {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Image</TableHead>
-                          <TableHead>Name</TableHead>
-                          <TableHead>Category</TableHead>
-                          <TableHead>Base Price</TableHead>
-                          <TableHead>Sizes</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Featured</TableHead>
-                          <TableHead>Actions</TableHead>
+                      <TableHead>Image</TableHead>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Category</TableHead>
+                      <TableHead>Sizes & Prices</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Featured</TableHead>
+                      <TableHead>Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                     <TableBody>
                       {data?.products.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={8} className="text-center text-muted-foreground">
+                          <TableCell colSpan={7} className="text-center text-muted-foreground">
                             No products found
                           </TableCell>
                         </TableRow>
@@ -458,18 +461,22 @@ const ManageCakes = () => {
                             <TableCell>
                               {product.categories?.name || "Uncategorized"}
                             </TableCell>
-                            <TableCell>₹{product.base_price}</TableCell>
                             <TableCell>
                               {product.product_sizes && product.product_sizes.length > 0 ? (
-                                <div className="flex flex-wrap gap-1">
+                                <div className="space-y-1">
                                   {product.product_sizes.map((size: any, idx: number) => (
-                                    <Badge key={idx} variant="outline" className="text-xs">
-                                      {size.size_name}
-                                    </Badge>
+                                    <div key={idx} className="flex items-center gap-2">
+                                      <Badge variant="outline" className="text-xs">
+                                        {size.size_name}
+                                      </Badge>
+                                      <span className="text-xs font-semibold text-primary">
+                                        ₹{size.price_multiplier}
+                                      </span>
+                                    </div>
                                   ))}
                                 </div>
                               ) : (
-                                <span className="text-xs text-muted-foreground">No sizes</span>
+                                <span className="text-xs text-destructive">No sizes added</span>
                               )}
                             </TableCell>
                             <TableCell>
@@ -578,37 +585,23 @@ const ManageCakes = () => {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="base_price">Base Price (₹) *</Label>
-                  <Input
-                    id="base_price"
-                    type="number"
-                    step="0.01"
-                    value={formData.base_price}
-                    onChange={(e) => setFormData({ ...formData, base_price: e.target.value })}
-                    required
-                  />
-                </div>
-
-                <div className="grid gap-2">
-                  <Label htmlFor="category_id">Category</Label>
-                  <Select
-                    value={formData.category_id}
-                    onValueChange={(value) => setFormData({ ...formData, category_id: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories?.map((cat) => (
-                        <SelectItem key={cat.id} value={cat.id}>
-                          {cat.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+              <div className="grid gap-2">
+                <Label htmlFor="category_id">Category</Label>
+                <Select
+                  value={formData.category_id}
+                  onValueChange={(value) => setFormData({ ...formData, category_id: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories?.map((cat) => (
+                      <SelectItem key={cat.id} value={cat.id}>
+                        {cat.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="grid gap-2">

@@ -15,7 +15,6 @@ interface CakePurchaseModalProps {
   cake: {
     id: string;
     name: string;
-    basePrice: number;
     imageUrl: string;
     description?: string;
     category?: string;
@@ -123,10 +122,9 @@ export const CakePurchaseModal = ({ isOpen, onClose, cake }: CakePurchaseModalPr
   };
 
   const calculateTotal = () => {
-    const sizeMultiplier = selectedSize?.price_multiplier || 1;
-    const basePrice = cake.basePrice * sizeMultiplier;
+    const sizePrice = selectedSize?.price_multiplier || 0;
     const addonsTotal = selectedAddons.reduce((sum, addon) => sum + (addon.price * addon.quantity), 0);
-    return basePrice + addonsTotal;
+    return sizePrice + addonsTotal;
   };
 
   const handleAddToCart = () => {
@@ -144,7 +142,7 @@ export const CakePurchaseModal = ({ isOpen, onClose, cake }: CakePurchaseModalPr
       productId: cake.id,
       sizeId: selectedSize.id,
       name: cake.name,
-      basePrice: cake.basePrice * (selectedSize.price_multiplier || 1),
+      basePrice: selectedSize.price_multiplier, // Use size price directly
       imageUrl: cake.imageUrl,
       size: selectedSize.size_name,
       addons: selectedAddons,
@@ -196,7 +194,9 @@ export const CakePurchaseModal = ({ isOpen, onClose, cake }: CakePurchaseModalPr
             </div>
             <div className="space-y-4">
               <div>
-                <p className="text-lg font-semibold text-primary">₹{cake.basePrice}</p>
+                {selectedSize && (
+                  <p className="text-2xl font-bold text-primary">₹{selectedSize.price_multiplier}</p>
+                )}
                 {cake.category && (
                   <Badge variant="secondary" className="mt-2">{cake.category}</Badge>
                 )}
@@ -208,7 +208,7 @@ export const CakePurchaseModal = ({ isOpen, onClose, cake }: CakePurchaseModalPr
               {/* Size Selection */}
               {availableSizes.length > 0 && (
                 <div>
-                  <label className="text-sm font-medium mb-2 block">Size</label>
+                  <label className="text-sm font-medium mb-2 block">Select Size *</label>
                   <Select 
                     value={selectedSize?.id || ""} 
                     onValueChange={(value) => {
@@ -222,12 +222,12 @@ export const CakePurchaseModal = ({ isOpen, onClose, cake }: CakePurchaseModalPr
                     <SelectContent>
                       {availableSizes.map((size) => (
                         <SelectItem key={size.id} value={size.id}>
-                          {size.size_name}
-                          {size.price_multiplier !== 1 && (
-                            <span className="ml-2 text-sm text-muted-foreground">
-                              (₹{Math.round(cake.basePrice * size.price_multiplier)})
+                          <div className="flex items-center justify-between gap-4">
+                            <span>{size.size_name}</span>
+                            <span className="font-semibold text-primary">
+                              ₹{Math.round(size.price_multiplier)}
                             </span>
-                          )}
+                          </div>
                         </SelectItem>
                       ))}
                     </SelectContent>

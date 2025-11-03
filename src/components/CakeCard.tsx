@@ -33,6 +33,7 @@ const CakeCard = ({ id, name, description, basePrice, imageUrl, category, isFeat
   const { toast } = useToast();
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
   const [sizes, setSizes] = useState<ProductSize[]>([]);
+  const [minPrice, setMinPrice] = useState<number>(0);
   
   const favorites = useAppSelector(state => state.favorites.items);
   const { isAuthenticated } = useAppSelector(state => state.auth);
@@ -52,6 +53,9 @@ const CakeCard = ({ id, name, description, basePrice, imageUrl, category, isFeat
 
       if (!error && data) {
         setSizes(data);
+        if (data.length > 0) {
+          setMinPrice(data[0].price_multiplier);
+        }
       }
     } catch (error) {
       console.error('Error fetching sizes:', error);
@@ -117,7 +121,6 @@ const CakeCard = ({ id, name, description, basePrice, imageUrl, category, isFeat
   const cakeData = {
     id,
     name,
-    basePrice,
     imageUrl,
     description,
     category
@@ -160,7 +163,16 @@ const CakeCard = ({ id, name, description, basePrice, imageUrl, category, isFeat
               {description || "Delicious handcrafted cake made with premium ingredients"}
             </p>
             <div className="flex items-center justify-between mb-3">
-              <p className="text-2xl font-bold text-primary">₹{basePrice}</p>
+              <div>
+                {minPrice > 0 ? (
+                  <div className="flex flex-col">
+                    <span className="text-xs text-muted-foreground">Starting from</span>
+                    <p className="text-2xl font-bold text-primary">₹{minPrice}</p>
+                  </div>
+                ) : (
+                  <p className="text-sm text-destructive">Select size</p>
+                )}
+              </div>
               {sizes.length > 0 && (
                 <div className="flex items-center gap-1 text-xs text-muted-foreground">
                   <Package className="h-3 w-3" />
@@ -172,7 +184,7 @@ const CakeCard = ({ id, name, description, basePrice, imageUrl, category, isFeat
               <div className="flex flex-wrap gap-1 mb-3">
                 {sizes.slice(0, 3).map((size) => (
                   <Badge key={size.id} variant="outline" className="text-xs">
-                    {size.size_name}
+                    {size.size_name} - ₹{size.price_multiplier}
                   </Badge>
                 ))}
                 {sizes.length > 3 && (
