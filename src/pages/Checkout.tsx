@@ -245,14 +245,21 @@ const Checkout = () => {
       // Store customer phone for future coupon validation
       localStorage.setItem('customer_phone', customerDetails.phone);
 
-      // Get logged-in user ID
-      const { data: { user } } = await supabase.auth.getUser();
+      // Get logged-in user ID - refresh session first to ensure it's valid
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError) {
+        console.error('Error getting session:', sessionError);
+      }
+      
+      const userId = session?.user?.id || null;
+      console.log('Creating order with user ID:', userId);
 
       // Create order using correct schema fields
       const { data: order, error: orderError } = await supabase
         .from('orders')
         .insert({
-          customer_id: user?.id || null,
+          customer_id: userId,
           delivery_name: customerDetails.name,
           delivery_phone: customerDetails.phone,
           delivery_address: deliveryAddress,

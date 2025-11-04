@@ -54,6 +54,13 @@ const Profile = () => {
     }
   }, [isAuthenticated, user]);
 
+  // Refetch orders when navigating to my-orders tab
+  useEffect(() => {
+    if (isAuthenticated && user && activeTab === 'my-orders') {
+      fetchUserOrders();
+    }
+  }, [activeTab, isAuthenticated, user]);
+
   const fetchUserProfile = async () => {
     if (!user?.id) return;
     
