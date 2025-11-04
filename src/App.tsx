@@ -20,6 +20,7 @@ import AdminLogin from "./pages/AdminLogin";
 import Dashboard from "./pages/private/Dashboard";
 import ManageOrders from "./pages/private/ManageOrders";
 import ManageCakes from "./pages/private/ManageCakes";
+import ManageAddons from "./pages/private/ManageAddons";
 import PrivateRoute from "./components/PrivateRoute";
 
 const queryClient = new QueryClient();
@@ -53,6 +54,7 @@ const App = () => (
               <Route path="/private/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
               <Route path="/private/orders" element={<PrivateRoute><ManageOrders /></PrivateRoute>} />
               <Route path="/private/cakes" element={<PrivateRoute><ManageCakes /></PrivateRoute>} />
+              <Route path="/private/addons" element={<PrivateRoute><ManageAddons /></PrivateRoute>} />
               
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
