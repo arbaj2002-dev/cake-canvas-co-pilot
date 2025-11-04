@@ -47,20 +47,14 @@ const Checkout = () => {
     instructions: ""
   });
 
-  const savedAddresses = [
+  const [savedAddresses, setSavedAddresses] = useState([
     {
       id: "home",
       label: "Home",
-      address: "123 Sweet Street, Cake Town, Mumbai, 400001",
+      address: "",
       isDefault: true
-    },
-    {
-      id: "office",
-      label: "Office",
-      address: "456 Business Park, Corporate City, Mumbai, 400002",
-      isDefault: false
     }
-  ];
+  ]);
 
   const [newAddress, setNewAddress] = useState({
     label: "",
@@ -100,7 +94,46 @@ const Checkout = () => {
     
     // Fetch available addons
     fetchAddons();
+    
+    // Fetch user profile to pre-fill address
+    fetchUserProfile();
   }, [navigate]);
+
+  const fetchUserProfile = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('address, phone, full_name')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (!error && profile) {
+          // Update customer details
+          setCustomerDetails({
+            name: profile.full_name || customerDetails.name,
+            phone: profile.phone || customerDetails.phone,
+            email: user.email || customerDetails.email
+          });
+
+          // Update home address if available
+          if (profile.address) {
+            setSavedAddresses([
+              {
+                id: "home",
+                label: "Home",
+                address: profile.address,
+                isDefault: true
+              }
+            ]);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+    }
+  };
 
   const fetchAddons = async () => {
     try {

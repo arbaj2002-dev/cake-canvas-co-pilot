@@ -180,20 +180,6 @@ const CakeCard = ({ id, name, description, basePrice, imageUrl, category, isFeat
                 </div>
               )}
             </div>
-            {sizes.length > 0 && (
-              <div className="flex flex-wrap gap-1 mb-3">
-                {sizes.slice(0, 3).map((size) => (
-                  <Badge key={size.id} variant="outline" className="text-xs">
-                    {size.size_name} - ₹{size.price_multiplier}
-                  </Badge>
-                ))}
-                {sizes.length > 3 && (
-                  <Badge variant="outline" className="text-xs">
-                    +{sizes.length - 3} more
-                  </Badge>
-                )}
-              </div>
-            )}
           </div>
         </CardContent>
         
