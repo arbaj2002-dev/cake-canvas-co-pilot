@@ -4,8 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState } from "react";
-import { AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
-import { Calendar, TrendingUp, Package, Users, ShoppingCart } from "lucide-react";
+import { AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from "recharts";
+import { Calendar, TrendingUp, Package, Users, ShoppingCart, ArrowUpRight, ArrowDownRight } from "lucide-react";
 
 const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#a78bfa'];
 
@@ -122,16 +122,6 @@ export const DashboardAnalytics = () => {
     },
   });
 
-  if (statsLoading || productsLoading) {
-    return (
-      <div className="space-y-6">
-        {[1, 2, 3].map((i) => (
-          <Skeleton key={i} className="h-64 w-full" />
-        ))}
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
       {/* Time Range Filter */}
@@ -139,7 +129,7 @@ export const DashboardAnalytics = () => {
         <h2 className="text-2xl font-bold">Analytics Overview</h2>
         <div className="flex items-center gap-2">
           <Calendar className="h-4 w-4 text-muted-foreground" />
-          <Select value={timeRange} onValueChange={setTimeRange}>
+          <Select value={timeRange} onValueChange={setTimeRange} disabled={statsLoading || productsLoading}>
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Select range" />
             </SelectTrigger>
@@ -153,8 +143,16 @@ export const DashboardAnalytics = () => {
         </div>
       </div>
 
+      {statsLoading || productsLoading ? (
+        <div className="space-y-6">
+          {[1, 2, 3, 4].map((i) => (
+            <Skeleton key={i} className="h-64 w-full" />
+          ))}
+        </div>
+      ) : (
+      <>
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4" style={{ opacity: statsLoading ? 0.5 : 1, pointerEvents: statsLoading ? 'none' : 'auto' }}>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -212,7 +210,7 @@ export const DashboardAnalytics = () => {
       </div>
 
       {/* Charts Row 1 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6" style={{ opacity: productsLoading ? 0.5 : 1, pointerEvents: productsLoading ? 'none' : 'auto' }}>
         {/* Sales Trend */}
         <Card>
           <CardHeader>
@@ -281,7 +279,7 @@ export const DashboardAnalytics = () => {
       </div>
 
       {/* Top Products */}
-      <Card>
+      <Card style={{ opacity: productsLoading ? 0.5 : 1, pointerEvents: productsLoading ? 'none' : 'auto' }}>
         <CardHeader>
           <CardTitle>Top 5 Products</CardTitle>
           <CardDescription>Most ordered products in selected period</CardDescription>
@@ -299,6 +297,8 @@ export const DashboardAnalytics = () => {
           </ResponsiveContainer>
         </CardContent>
       </Card>
+      </>
+      )}
     </div>
   );
 };
