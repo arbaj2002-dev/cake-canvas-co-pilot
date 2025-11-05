@@ -437,8 +437,17 @@ const ManageCakes = () => {
                     <TableBody>
                       {data?.products.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={7} className="text-center text-muted-foreground">
-                            No products found
+                          <TableCell colSpan={7} className="text-center py-12">
+                            <div className="flex flex-col items-center gap-4">
+                              <p className="text-muted-foreground">No cakes found</p>
+                              <Button onClick={() => {
+                                resetForm();
+                                setIsDialogOpen(true);
+                              }}>
+                                <Plus className="h-4 w-4 mr-2" />
+                                Add Cake
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ) : (

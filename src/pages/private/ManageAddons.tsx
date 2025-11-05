@@ -374,7 +374,7 @@ const ManageAddons = () => {
                       setIsDialogOpen(true);
                     }}>
                       <Plus className="h-4 w-4 mr-2" />
-                      Add Your First Add-on
+                      Add Add-on
                     </Button>
                   </div>
                 )}
