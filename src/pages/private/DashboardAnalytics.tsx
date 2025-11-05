@@ -4,10 +4,121 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState } from "react";
-import { AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from "recharts";
-import { Calendar, TrendingUp, Package, Users, ShoppingCart, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { Calendar, TrendingUp, Package, Users, ShoppingCart } from "lucide-react";
 
-const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#a78bfa'];
+const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#a78bfa'];
+
+const LineChart = ({ data }: { data: any[] }) => {
+  if (!data || data.length === 0) return null;
+
+  const maxSales = Math.max(...data.map(d => d.sales));
+  const minSales = 0;
+  const range = maxSales - minSales;
+  const padding = 40;
+  const chartWidth = 100 - (padding * 2) / (100);
+  const width = 100;
+  const height = 100;
+
+  const points = data.map((d, i) => {
+    const x = padding + (i / (data.length - 1 || 1)) * (width - padding * 2);
+    const y = height - padding - ((d.sales - minSales) / range || 0) * (height - padding * 2);
+    return { x, y, sales: d.sales };
+  });
+
+  const pathD = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
+
+  return (
+    <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-[300px]">
+      <defs>
+        <linearGradient id="lineGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.3" />
+          <stop offset="100%" stopColor="#3b82f6" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <path d={pathD} stroke="#3b82f6" strokeWidth="2" fill="none" />
+      <path d={`${pathD} L ${points[points.length - 1].x} ${height - padding} L ${points[0].x} ${height - padding} Z`} fill="url(#lineGradient)" />
+      {points.map((p, i) => (
+        <circle key={i} cx={p.x} cy={p.y} r="2" fill="#3b82f6" />
+      ))}
+    </svg>
+  );
+};
+
+const PieChart = ({ data }: { data: any[] }) => {
+  if (!data || data.length === 0) return null;
+
+  const total = data.reduce((sum, item) => sum + item.value, 0);
+  const size = 200;
+  const radius = 80;
+  const centerX = size / 2;
+  const centerY = size / 2;
+
+  let currentAngle = -90;
+  const slices = data.map((item, index) => {
+    const sliceAngle = (item.value / total) * 360;
+    const startAngle = currentAngle;
+    const endAngle = currentAngle + sliceAngle;
+
+    const startRad = (startAngle * Math.PI) / 180;
+    const endRad = (endAngle * Math.PI) / 180;
+
+    const x1 = centerX + radius * Math.cos(startRad);
+    const y1 = centerY + radius * Math.sin(startRad);
+    const x2 = centerX + radius * Math.cos(endRad);
+    const y2 = centerY + radius * Math.sin(endRad);
+
+    const largeArc = sliceAngle > 180 ? 1 : 0;
+    const pathData = `M ${centerX} ${centerY} L ${x1} ${y1} A ${radius} ${radius} 0 ${largeArc} 1 ${x2} ${y2} Z`;
+
+    currentAngle = endAngle;
+
+    return { pathData, color: COLORS[index % COLORS.length], percentage: ((item.value / total) * 100).toFixed(0), name: item.name };
+  });
+
+  return (
+    <div className="flex items-center justify-center">
+      <svg viewBox={`0 0 ${size} ${size}`} className="w-[200px] h-[200px]">
+        {slices.map((slice, i) => (
+          <path key={i} d={slice.pathData} fill={slice.color} stroke="white" strokeWidth="2" />
+        ))}
+      </svg>
+      <div className="ml-4 space-y-2">
+        {slices.map((slice, i) => (
+          <div key={i} className="text-sm flex items-center gap-2">
+            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: slice.color }} />
+            <span>{slice.name}: {slice.percentage}%</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const BarChart = ({ data }: { data: any[] }) => {
+  if (!data || data.length === 0) return null;
+
+  const maxQuantity = Math.max(...data.map(d => d.quantity));
+  const padding = 40;
+  const width = 100;
+  const height = 100;
+  const barWidth = (width - padding * 2) / data.length * 0.8;
+  const barGap = (width - padding * 2) / data.length * 0.2;
+
+  return (
+    <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-[300px]">
+      {data.map((item, i) => {
+        const x = padding + i * (barWidth + barGap);
+        const barHeight = (item.quantity / maxQuantity) * (height - padding * 2);
+        const y = height - padding - barHeight;
+        return (
+          <g key={i}>
+            <rect x={x} y={y} width={barWidth} height={barHeight} fill="#10b981" rx="2" />
+          </g>
+        );
+      })}
+    </svg>
+  );
+};
 
 export const DashboardAnalytics = () => {
   const [timeRange, setTimeRange] = useState("30");
@@ -218,33 +329,7 @@ export const DashboardAnalytics = () => {
             <CardDescription>Daily sales over selected period</CardDescription>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <AreaChart data={stats?.salesTrendData}>
-                <defs>
-                  <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#8884d8" stopOpacity={0.8}/>
-                    <stop offset="95%" stopColor="#8884d8" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis 
-                  dataKey="date" 
-                  tick={{ fontSize: 12 }}
-                  angle={-45}
-                  textAnchor="end"
-                  height={80}
-                />
-                <YAxis tick={{ fontSize: 12 }} />
-                <Tooltip />
-                <Area 
-                  type="monotone" 
-                  dataKey="sales" 
-                  stroke="#8884d8" 
-                  fillOpacity={1} 
-                  fill="url(#colorSales)" 
-                />
-              </AreaChart>
-            </ResponsiveContainer>
+            <LineChart data={stats?.salesTrendData || []} />
           </CardContent>
         </Card>
 
@@ -255,25 +340,7 @@ export const DashboardAnalytics = () => {
             <CardDescription>Distribution of order statuses</CardDescription>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={stats?.orderStatusData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {stats?.orderStatusData?.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
+            <PieChart data={stats?.orderStatusData || []} />
           </CardContent>
         </Card>
       </div>
@@ -285,16 +352,7 @@ export const DashboardAnalytics = () => {
           <CardDescription>Most ordered products in selected period</CardDescription>
         </CardHeader>
         <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={topProducts}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-              <YAxis tick={{ fontSize: 12 }} />
-              <Tooltip />
-              <Legend />
-              <Bar dataKey="quantity" fill="#82ca9d" name="Quantity Sold" />
-            </BarChart>
-          </ResponsiveContainer>
+          <BarChart data={topProducts || []} />
         </CardContent>
       </Card>
       </>
