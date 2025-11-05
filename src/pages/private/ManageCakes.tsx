@@ -421,22 +421,28 @@ const ManageCakes = () => {
               </div>
             ) : (
               <>
-                {data?.products && data.products.length > 0 ? (
-                  <div className="rounded-md border">
+                <div className="rounded-md border">
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Image</TableHead>
-                          <TableHead>Name</TableHead>
-                          <TableHead>Category</TableHead>
-                          <TableHead>Sizes & Prices</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Featured</TableHead>
-                          <TableHead>Actions</TableHead>
+                      <TableHead>Image</TableHead>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Category</TableHead>
+                      <TableHead>Sizes & Prices</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Featured</TableHead>
+                      <TableHead>Actions</TableHead>
                         </TableRow>
                       </TableHeader>
-                      <TableBody>
-                        {data.products.map((product) => (
+                    <TableBody>
+                      {data?.products.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={7} className="text-center text-muted-foreground">
+                            No products found
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        data?.products.map((product) => (
                           <TableRow key={product.id}>
                             <TableCell>
                               {product.image_url ? (
@@ -506,24 +512,13 @@ const ManageCakes = () => {
                               </div>
                             </TableCell>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                ) : (
-                  <div className="text-center py-12">
-                    <p className="text-muted-foreground mb-4">No cakes found</p>
-                    <Button onClick={() => {
-                      resetForm();
-                      setIsDialogOpen(true);
-                    }}>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Cake
-                    </Button>
-                  </div>
-                )}
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
 
-                {data && totalPages > 1 && (
+                {totalPages > 1 && (
                   <div className="mt-4">
                     <Pagination>
                       <PaginationContent>
