@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { DashboardAnalytics } from "./DashboardAnalytics";
 import { 
   LayoutDashboard, 
   ShoppingBag, 
@@ -115,11 +114,6 @@ const Dashboard = () => {
             <LogOut className="h-4 w-4 mr-2" />
             Logout
           </Button>
-        </div>
-
-        {/* Analytics Dashboard */}
-        <div className="mb-8">
-          <DashboardAnalytics />
         </div>
 
         {/* Admin Modules */}
