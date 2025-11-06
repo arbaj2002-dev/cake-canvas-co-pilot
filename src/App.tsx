@@ -23,6 +23,8 @@ import ManageCakes from "./pages/private/ManageCakes";
 import ManageAddons from "./pages/private/ManageAddons";
 import ManageCustomers from "./pages/private/ManageCustomers";
 import ManageCustomerQueries from "./pages/private/ManageCustomerQueries";
+import ManageCoupons from "./pages/private/ManageCoupons";
+import ManageGallery from "./pages/private/ManageGallery";
 import PrivateRoute from "./components/PrivateRoute";
 
 const queryClient = new QueryClient();
@@ -59,7 +61,9 @@ const App = () => (
               <Route path="/private/addons" element={<PrivateRoute><ManageAddons /></PrivateRoute>} />
               <Route path="/private/customers" element={<PrivateRoute><ManageCustomers /></PrivateRoute>} />
               <Route path="/private/queries" element={<PrivateRoute><ManageCustomerQueries /></PrivateRoute>} />
-              
+              <Route path="/private/coupons" element={<PrivateRoute><ManageCoupons /></PrivateRoute>} />
+              <Route path="/private/gallery" element={<PrivateRoute><ManageGallery /></PrivateRoute>} />
+
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
