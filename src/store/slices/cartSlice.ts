@@ -22,10 +22,15 @@ export interface CartItem {
 
 interface CartState {
   items: CartItem[];
+  appliedCoupon: {
+    code: string;
+    discountAmount: number;
+  } | null;
 }
 
 const initialState: CartState = {
   items: [],
+  appliedCoupon: null,
 };
 
 const cartSlice = createSlice({
@@ -58,9 +63,16 @@ const cartSlice = createSlice({
     },
     clearCart: (state) => {
       state.items = [];
+      state.appliedCoupon = null;
+    },
+    applyCoupon: (state, action: PayloadAction<{ code: string; discountAmount: number }>) => {
+      state.appliedCoupon = action.payload;
+    },
+    removeCoupon: (state) => {
+      state.appliedCoupon = null;
     },
   },
 });
 
-export const { addToCart, removeFromCart, updateCartItemQuantity, updateCartItemAddons, clearCart } = cartSlice.actions;
+export const { addToCart, removeFromCart, updateCartItemQuantity, updateCartItemAddons, clearCart, applyCoupon, removeCoupon } = cartSlice.actions;
 export default cartSlice.reducer;

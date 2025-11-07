@@ -9,17 +9,18 @@ import Header from "@/components/Header";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { useAppSelector, useAppDispatch } from "@/store/hooks";
-import { removeFromCart, updateCartItemQuantity, updateCartItemAddons } from "@/store/slices/cartSlice";
-import { supabase } from "@/integrations/supabase/client";
+import { removeFromCart, updateCartItemQuantity, updateCartItemAddons, applyCoupon as applyCouponAction, removeCoupon as removeCouponAction } from "@/store/slices/cartSlice";
+import { useCoupon } from "@/hooks/useCoupon";
 
 const Cart = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const cartItems = useAppSelector((state) => state.cart.items);
+  const appliedCoupon = useAppSelector((state) => state.cart.appliedCoupon);
+  const user = useAppSelector((state) => state.auth.user);
   const [couponCode, setCouponCode] = useState("");
-  const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null);
-  const [discount, setDiscount] = useState(0);
+  const { validateCoupon, isValidating } = useCoupon();
 
   const updateQuantity = (itemId: string, newQuantity: number) => {
     if (newQuantity < 1) return;
@@ -48,56 +49,53 @@ const Cart = () => {
     dispatch(updateCartItemAddons({ id: itemId, addons: updatedAddons }));
   };
 
-  const applyCoupon = async () => {
-    if (couponCode.toUpperCase() === "MY_FIRST_CAKE20" && !appliedCoupon) {
-      // Check if this is customer's first order
-      const customerPhone = localStorage.getItem('customer_phone');
-      
-      if (customerPhone) {
-        try {
-          const { data: existingOrders } = await supabase
-            .from('orders')
-            .select('id')
-            .eq('delivery_phone', customerPhone);
-
-          if (existingOrders && existingOrders.length > 0) {
-            toast({
-              title: "Coupon Not Applicable",
-              description: "This coupon is only valid for first-time customers",
-              variant: "destructive"
-            });
-            setCouponCode("");
-            return;
-          }
-        } catch (error) {
-          console.error('Error checking customer order history:', error);
-        }
-      }
-
-      setAppliedCoupon("MY_FIRST_CAKE20");
-      setDiscount(20);
+  const handleApplyCoupon = async () => {
+    if (!couponCode.trim()) {
       toast({
-        title: "Coupon Applied!",
-        description: "You got 20% off on your first order! 🎉"
+        title: "Enter Coupon Code",
+        description: "Please enter a coupon code",
+        variant: "destructive"
       });
-    } else if (appliedCoupon) {
+      return;
+    }
+
+    if (appliedCoupon) {
       toast({
         title: "Coupon Already Applied",
-        description: "You can only use one coupon per order"
+        description: "Remove the current coupon to apply a new one",
+        variant: "destructive"
       });
+      return;
+    }
+
+    const subtotal = calculateSubtotal();
+    const result = await validateCoupon({
+      code: couponCode,
+      cartTotal: subtotal,
+      userId: user?.id,
+    });
+
+    if (result.isValid) {
+      dispatch(applyCouponAction({
+        code: couponCode.toUpperCase(),
+        discountAmount: result.discountAmount,
+      }));
+      toast({
+        title: "Success!",
+        description: result.message,
+      });
+      setCouponCode("");
     } else {
       toast({
         title: "Invalid Coupon",
-        description: "Please check your coupon code",
+        description: result.message,
         variant: "destructive"
       });
     }
-    setCouponCode("");
   };
 
-  const removeCoupon = () => {
-    setAppliedCoupon(null);
-    setDiscount(0);
+  const handleRemoveCoupon = () => {
+    dispatch(removeCouponAction());
     toast({
       title: "Coupon Removed",
       description: "Coupon has been removed from your order"
@@ -113,7 +111,7 @@ const Cart = () => {
   };
 
   const subtotal = calculateSubtotal();
-  const discountAmount = (subtotal * discount) / 100;
+  const discountAmount = appliedCoupon?.discountAmount || 0;
   const finalTotal = subtotal - discountAmount;
 
   return (
@@ -243,21 +241,26 @@ const Cart = () => {
                           placeholder="Enter coupon code"
                           value={couponCode}
                           onChange={(e) => setCouponCode(e.target.value)}
+                          onKeyPress={(e) => e.key === 'Enter' && handleApplyCoupon()}
                         />
-                        <Button onClick={applyCoupon} variant="outline">
-                          Apply
+                        <Button 
+                          onClick={handleApplyCoupon} 
+                          variant="outline"
+                          disabled={isValidating}
+                        >
+                          {isValidating ? "Checking..." : "Apply"}
                         </Button>
                       </div>
                     ) : (
                       <div className="flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-lg">
                         <div className="flex items-center gap-2">
                           <Gift className="h-4 w-4 text-green-600" />
-                          <span className="text-sm font-medium text-green-800">{appliedCoupon}</span>
+                          <span className="text-sm font-medium text-green-800">{appliedCoupon.code}</span>
                         </div>
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={removeCoupon}
+                          onClick={handleRemoveCoupon}
                           className="text-red-500"
                         >
                           Remove
@@ -266,7 +269,7 @@ const Cart = () => {
                     )}
                     
                     <div className="text-xs text-muted-foreground">
-                      <p>💡 First time customer? Use code <strong>MY_FIRST_CAKE20</strong> for 20% off!</p>
+                      <p>💡 Apply coupon codes for special discounts!</p>
                     </div>
                   </CardContent>
                 </Card>
@@ -284,8 +287,8 @@ const Cart = () => {
                     
                     {appliedCoupon && (
                       <div className="flex justify-between text-green-600">
-                        <span>Discount ({discount}%)</span>
-                        <span>-₹{discountAmount}</span>
+                        <span>Discount ({appliedCoupon.code})</span>
+                        <span>-₹{discountAmount.toFixed(2)}</span>
                       </div>
                     )}
                     
@@ -303,10 +306,9 @@ const Cart = () => {
                         localStorage.setItem('checkout_data', JSON.stringify({
                           items: cartItems,
                           subtotal,
-                          discount,
                           discountAmount,
                           total: finalTotal,
-                          appliedCoupon
+                          appliedCoupon: appliedCoupon?.code || null
                         }));
                         navigate('/checkout');
                       }}

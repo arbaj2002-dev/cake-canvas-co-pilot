@@ -255,6 +255,18 @@ const Checkout = () => {
       const userId = session?.user?.id || null;
       console.log('Creating order with user ID:', userId);
 
+      // Get coupon_id if coupon was applied
+      let couponId = null;
+      if (orderSummary.appliedCoupon) {
+        const { data: couponData } = await supabase
+          .from('coupons')
+          .select('id')
+          .eq('code', orderSummary.appliedCoupon)
+          .single();
+        
+        couponId = couponData?.id || null;
+      }
+
       // Create order using correct schema fields
       const { data: order, error: orderError } = await supabase
         .from('orders')
@@ -267,7 +279,9 @@ const Checkout = () => {
           total_amount: orderSummary.total,
           payment_method: paymentMethod,
           payment_status: paymentMethod === 'cod' ? 'pending' : 'completed',
-          status: 'pending'
+          status: 'pending',
+          coupon_id: couponId,
+          discount_amount: orderSummary.discountAmount || 0
         })
         .select()
         .single();
@@ -313,6 +327,22 @@ const Checkout = () => {
               console.error('Error creating order addon:', addonError);
             }
           }
+        }
+      }
+
+      // Record coupon usage if coupon was applied
+      if (couponId && orderSummary.discountAmount > 0) {
+        const { error: usageError } = await supabase
+          .from('coupon_usages')
+          .insert({
+            coupon_id: couponId,
+            user_id: userId,
+            order_id: order.id,
+            discount_amount: orderSummary.discountAmount
+          });
+
+        if (usageError) {
+          console.error('Error recording coupon usage:', usageError);
         }
       }
 

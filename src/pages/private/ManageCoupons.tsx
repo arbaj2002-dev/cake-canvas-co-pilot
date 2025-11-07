@@ -52,7 +52,10 @@ interface CouponFormData {
   discount_type: "percentage" | "fixed";
   discount_value: string;
   max_uses: string;
+  max_uses_per_user: string;
   min_order_amount: string;
+  expires_at: string;
+  is_first_time_only: boolean;
   is_active: boolean;
 }
 
@@ -72,7 +75,10 @@ const ManageCoupons = () => {
     discount_type: "percentage",
     discount_value: "",
     max_uses: "",
+    max_uses_per_user: "1",
     min_order_amount: "",
+    expires_at: "",
+    is_first_time_only: false,
     is_active: true,
   });
 
@@ -110,7 +116,10 @@ const ManageCoupons = () => {
         discount_type: data.discount_type,
         discount_value: parseFloat(data.discount_value),
         max_uses: data.max_uses ? parseInt(data.max_uses) : null,
+        max_uses_per_user: data.max_uses_per_user ? parseInt(data.max_uses_per_user) : 1,
         min_order_amount: data.min_order_amount ? parseFloat(data.min_order_amount) : null,
+        expires_at: data.expires_at || null,
+        is_first_time_only: data.is_first_time_only,
         is_active: data.is_active,
       };
 
@@ -173,7 +182,10 @@ const ManageCoupons = () => {
       discount_type: coupon.discount_type,
       discount_value: coupon.discount_value.toString(),
       max_uses: coupon.max_uses?.toString() || "",
+      max_uses_per_user: coupon.max_uses_per_user?.toString() || "1",
       min_order_amount: coupon.min_order_amount?.toString() || "",
+      expires_at: coupon.expires_at ? new Date(coupon.expires_at).toISOString().split('T')[0] : "",
+      is_first_time_only: coupon.is_first_time_only || false,
       is_active: coupon.is_active,
     });
     setIsDialogOpen(true);
@@ -186,7 +198,10 @@ const ManageCoupons = () => {
       discount_type: "percentage",
       discount_value: "",
       max_uses: "",
+      max_uses_per_user: "1",
       min_order_amount: "",
+      expires_at: "",
+      is_first_time_only: false,
       is_active: true,
     });
     setEditingCoupon(null);
@@ -273,8 +288,8 @@ const ManageCoupons = () => {
                         <TableHead>Code</TableHead>
                         <TableHead>Type</TableHead>
                         <TableHead>Discount</TableHead>
+                        <TableHead>Expires</TableHead>
                         <TableHead>Max Uses</TableHead>
-                        <TableHead>Min Order</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Actions</TableHead>
                       </TableRow>
@@ -300,8 +315,12 @@ const ManageCoupons = () => {
                                 ? `${coupon.discount_value}%`
                                 : `₹${coupon.discount_value}`}
                             </TableCell>
+                            <TableCell>
+                              {coupon.expires_at 
+                                ? new Date(coupon.expires_at).toLocaleDateString()
+                                : "No expiry"}
+                            </TableCell>
                             <TableCell>{coupon.max_uses || "Unlimited"}</TableCell>
-                            <TableCell>₹{coupon.min_order_amount || "0"}</TableCell>
                             <TableCell>
                               <Badge variant={coupon.is_active ? "default" : "secondary"}>
                                 {coupon.is_active ? "Active" : "Inactive"}
@@ -445,6 +464,20 @@ const ManageCoupons = () => {
                   />
                 </div>
                 <div className="grid gap-2">
+                  <Label htmlFor="max_uses_per_user">Max Uses Per User *</Label>
+                  <Input
+                    id="max_uses_per_user"
+                    type="number"
+                    value={formData.max_uses_per_user}
+                    onChange={(e) => setFormData({ ...formData, max_uses_per_user: e.target.value })}
+                    placeholder="1"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
                   <Label htmlFor="min_order_amount">Min Order Amount (₹)</Label>
                   <Input
                     id="min_order_amount"
@@ -457,6 +490,24 @@ const ManageCoupons = () => {
                     placeholder="Leave blank for no minimum"
                   />
                 </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="expires_at">Expiry Date</Label>
+                  <Input
+                    id="expires_at"
+                    type="date"
+                    value={formData.expires_at}
+                    onChange={(e) => setFormData({ ...formData, expires_at: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="is_first_time_only"
+                  checked={formData.is_first_time_only}
+                  onCheckedChange={(checked) => setFormData({ ...formData, is_first_time_only: checked })}
+                />
+                <Label htmlFor="is_first_time_only">First-time customers only</Label>
               </div>
 
               <div className="flex items-center space-x-2">

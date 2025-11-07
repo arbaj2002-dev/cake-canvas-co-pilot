@@ -71,6 +71,96 @@ export type Database = {
         }
         Relationships: []
       }
+      coupon_usages: {
+        Row: {
+          coupon_id: string
+          created_at: string
+          discount_amount: number
+          id: string
+          order_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          coupon_id: string
+          created_at?: string
+          discount_amount: number
+          id?: string
+          order_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          coupon_id?: string
+          created_at?: string
+          discount_amount?: number
+          id?: string
+          order_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coupon_usages_coupon_id_fkey"
+            columns: ["coupon_id"]
+            isOneToOne: false
+            referencedRelation: "coupons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coupon_usages_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coupons: {
+        Row: {
+          code: string
+          created_at: string
+          description: string | null
+          discount_type: string
+          discount_value: number
+          expires_at: string | null
+          id: string
+          is_active: boolean | null
+          is_first_time_only: boolean | null
+          max_uses: number | null
+          max_uses_per_user: number | null
+          min_order_amount: number | null
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          description?: string | null
+          discount_type: string
+          discount_value: number
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_first_time_only?: boolean | null
+          max_uses?: number | null
+          max_uses_per_user?: number | null
+          min_order_amount?: number | null
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          description?: string | null
+          discount_type?: string
+          discount_value?: number
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_first_time_only?: boolean | null
+          max_uses?: number | null
+          max_uses_per_user?: number | null
+          min_order_amount?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       customer_queries: {
         Row: {
           created_at: string
@@ -262,11 +352,13 @@ export type Database = {
       }
       orders: {
         Row: {
+          coupon_id: string | null
           created_at: string
           customer_id: string | null
           delivery_address: string
           delivery_name: string
           delivery_phone: string
+          discount_amount: number | null
           id: string
           order_notes: string | null
           payment_method: string
@@ -276,11 +368,13 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          coupon_id?: string | null
           created_at?: string
           customer_id?: string | null
           delivery_address: string
           delivery_name: string
           delivery_phone: string
+          discount_amount?: number | null
           id?: string
           order_notes?: string | null
           payment_method: string
@@ -290,11 +384,13 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          coupon_id?: string | null
           created_at?: string
           customer_id?: string | null
           delivery_address?: string
           delivery_name?: string
           delivery_phone?: string
+          discount_amount?: number | null
           id?: string
           order_notes?: string | null
           payment_method?: string
@@ -303,7 +399,15 @@ export type Database = {
           total_amount?: number
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "orders_coupon_id_fkey"
+            columns: ["coupon_id"]
+            isOneToOne: false
+            referencedRelation: "coupons"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       product_sizes: {
         Row: {
