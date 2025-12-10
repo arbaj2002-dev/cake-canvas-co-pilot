@@ -33,6 +33,13 @@ interface GalleryFormData {
   image_file: File | null;
 }
 
+interface GalleryImage {
+  id: string;
+  title: string;
+  image_url: string;
+  created_at: string;
+}
+
 const ManageGallery = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -51,7 +58,7 @@ const ManageGallery = () => {
     queryKey: ["admin-gallery", currentPage, searchQuery],
     queryFn: async () => {
       let query = supabase
-        .from("gallery")
+        .from("gallery" as any)
         .select("*", { count: "exact" })
         .order("created_at", { ascending: false })
         .range((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE - 1);
@@ -63,7 +70,7 @@ const ManageGallery = () => {
       const { data, error, count } = await query;
 
       if (error) throw error;
-      return { images: data || [], count: count || 0 };
+      return { images: (data || []) as unknown as GalleryImage[], count: count || 0 };
     },
   });
 
@@ -86,7 +93,7 @@ const ManageGallery = () => {
 
       const { data: urlData } = supabase.storage.from("images").getPublicUrl(filename);
 
-      const { error } = await supabase.from("gallery").insert([
+      const { error } = await supabase.from("gallery" as any).insert([
         {
           title: formDataToSend.title || "Untitled",
           image_url: urlData.publicUrl,
@@ -122,7 +129,7 @@ const ManageGallery = () => {
         }
       }
 
-      const { error } = await supabase.from("gallery").delete().eq("id", image.id);
+      const { error } = await supabase.from("gallery" as any).delete().eq("id", image.id);
 
       if (error) throw error;
     },
