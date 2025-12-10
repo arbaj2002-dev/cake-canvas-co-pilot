@@ -4,7 +4,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Eye, EyeOff, Cake } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
+import frostiqueLogo from "@/assets/frostique-logo.png";
 import Header from "@/components/Header";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
@@ -126,7 +127,7 @@ const Auth = () => {
 
         toast({
           title: "Login successful!",
-          description: "Welcome back to Sweet Delights!"
+          description: "Welcome back to Frostique!"
         });
         navigate("/cakes");
       }
@@ -283,7 +284,7 @@ const Auth = () => {
         
         toast({
           title: "Registration successful!",
-          description: "Welcome to Sweet Delights!"
+          description: "Welcome to Frostique!"
         });
         navigate("/profile");
       } else {
@@ -310,10 +311,12 @@ const Auth = () => {
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-md mx-auto">
           <div className="text-center mb-8">
-            <div className="w-16 h-16 bg-gradient-primary rounded-full flex items-center justify-center mx-auto mb-4">
-              <Cake className="h-8 w-8 text-white" />
-            </div>
-            <h1 className="hero-text text-3xl mb-2">Welcome to Sweet Delights</h1>
+            <img 
+              src={frostiqueLogo} 
+              alt="Frostique Logo" 
+              className="w-20 h-20 object-contain mx-auto mb-4"
+            />
+            <h1 className="hero-text text-3xl mb-2">Welcome to Frostique</h1>
             <p className="text-muted-foreground">Join our community of cake lovers</p>
           </div>
 
