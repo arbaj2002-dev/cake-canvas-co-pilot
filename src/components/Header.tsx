@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import frostiqueLogo from "@/assets/frostique-logo.png";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Heart, ShoppingCart, User, Menu, X, LogOut } from "lucide-react";
@@ -77,10 +78,12 @@ const Header = () => {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-2 group">
-            <div className="w-10 h-10 rounded-full bg-gradient-button flex items-center justify-center shadow-button group-hover:scale-110 transition-bounce">
-              <span className="text-white font-bold text-lg">🍰</span>
-            </div>
-            <span className="hero-text text-xl">Sweet Delights</span>
+            <img 
+              src={frostiqueLogo} 
+              alt="Frostique Logo" 
+              className="w-12 h-12 object-contain group-hover:scale-110 transition-bounce"
+            />
+            <span className="hero-text text-xl">Frostique</span>
           </Link>
 
           {/* Desktop Navigation */}
