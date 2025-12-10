@@ -8,50 +8,50 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    /* Bakery color palette - Cream, Charcoal, Blush, Gold */
-    --background: 30 100% 97%;
-    --foreground: 350 7% 11%;
+    /* Clean bakery palette - White/Cream background, Pink primary */
+    --background: 0 0% 100%;
+    --foreground: 0 0% 0%;
 
-    --card: 30 100% 98%;
-    --card-foreground: 350 7% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 0%;
 
-    --popover: 30 100% 97%;
-    --popover-foreground: 350 7% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 0%;
 
-    /* Blush accent as primary */
-    --primary: 12 48% 82%;
-    --primary-foreground: 350 7% 11%;
-    --primary-glow: 12 60% 88%;
+    /* Pink primary */
+    --primary: 340 82% 52%;
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 340 82% 65%;
 
-    /* Light cream secondary */
-    --secondary: 30 100% 95%;
-    --secondary-foreground: 350 7% 11%;
+    /* Light pink secondary */
+    --secondary: 340 30% 96%;
+    --secondary-foreground: 0 0% 20%;
 
-    /* Soft muted tones */
-    --muted: 30 50% 92%;
-    --muted-foreground: 350 7% 40%;
+    /* Muted tones - gray-800 equivalent for lead text */
+    --muted: 220 10% 95%;
+    --muted-foreground: 220 9% 26%;
 
-    /* Gold accent */
-    --accent: 45 64% 52%;
-    --accent-foreground: 350 7% 11%;
+    /* Pink accent */
+    --accent: 340 70% 60%;
+    --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 75% 65%;
+    --destructive: 0 75% 55%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 30 40% 88%;
-    --input: 30 50% 92%;
-    --ring: 12 48% 82%;
+    --border: 220 13% 90%;
+    --input: 220 13% 91%;
+    --ring: 340 82% 52%;
 
-    /* Custom bakery gradients */
-    --gradient-hero: linear-gradient(135deg, hsl(30 100% 97%) 0%, hsl(12 40% 92%) 100%);
-    --gradient-card: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(30 100% 97%) 100%);
-    --gradient-button: linear-gradient(135deg, hsl(12 48% 82%) 0%, hsl(12 60% 88%) 100%);
-    --gradient-accent: linear-gradient(135deg, hsl(45 64% 52%) 0%, hsl(45 70% 60%) 100%);
+    /* Custom bakery gradients with pink */
+    --gradient-hero: linear-gradient(135deg, hsl(0 0% 100%) 0%, hsl(340 30% 97%) 100%);
+    --gradient-card: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(340 20% 98%) 100%);
+    --gradient-button: linear-gradient(135deg, hsl(340 82% 52%) 0%, hsl(340 82% 60%) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(340 70% 55%) 0%, hsl(340 70% 65%) 100%);
 
-    /* Elegant shadows */
-    --shadow-soft: 0 4px 20px -4px hsl(12 30% 70% / 0.15);
-    --shadow-card: 0 8px 30px -8px hsl(12 25% 65% / 0.12);
-    --shadow-button: 0 4px 15px -2px hsl(12 48% 82% / 0.3);
+    /* Elegant shadows with pink tint */
+    --shadow-soft: 0 4px 20px -4px hsl(340 30% 70% / 0.15);
+    --shadow-card: 0 8px 30px -8px hsl(340 25% 65% / 0.12);
+    --shadow-button: 0 4px 15px -2px hsl(340 82% 52% / 0.3);
 
     /* Smooth transitions */
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -165,7 +165,7 @@ All colors MUST be HSL.
   }
   
   .text-gradient {
-    background: linear-gradient(135deg, hsl(12 48% 72%) 0%, hsl(45 64% 52%) 100%);
+    background: linear-gradient(135deg, hsl(340 82% 52%) 0%, hsl(340 70% 60%) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -179,10 +179,14 @@ All colors MUST be HSL.
   }
   
   .hero-text {
-    @apply text-4xl md:text-6xl font-bold leading-tight;
-    background: linear-gradient(135deg, hsl(12 48% 72%) 0%, hsl(45 64% 52%) 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    @apply text-4xl md:text-6xl font-bold leading-tight text-foreground;
+  }
+  
+  .heading {
+    @apply text-foreground font-bold;
+  }
+  
+  .lead {
+    @apply text-muted-foreground;
   }
 }
