@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { useAppSelector } from "@/store/hooks";
 import { resolveImageUrl } from "@/utils/imageMapper";
 
 interface Product {
@@ -29,13 +28,7 @@ const FeaturedCakes = () => {
 
   const fetchFeaturedCakes = async () => {
     try {
-      console.log('Fetching featured cakes...');
-
-      const timeout = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('supabase-timeout')), 3000)
-      );
-
-      const queryPromise = supabase
+      const { data, error } = await supabase
         .from('products')
         .select(`
           id,
@@ -52,61 +45,16 @@ const FeaturedCakes = () => {
         .eq('is_active', true)
         .limit(3);
 
-      const { data, error } = await Promise.race([queryPromise, timeout]) as any;
-      console.log('Featured cakes result:', { data, error });
-
       if (error) {
         console.error('Error fetching featured cakes:', error);
-        useMockData();
-        return;
-      }
-
-      if (data && data.length > 0) {
-        setFeaturedCakes(data);
       } else {
-        console.warn('No featured cakes found in database, using mock data');
-        useMockData();
+        setFeaturedCakes(data || []);
       }
     } catch (err: any) {
       console.error('Error fetching featured cakes:', err);
-      useMockData();
     } finally {
       setLoading(false);
     }
-  };
-
-  const useMockData = () => {
-    console.log('Using mock featured cake data');
-    const mockCakes: Product[] = [
-      {
-        id: '1',
-        name: 'Chocolate Birthday Delight',
-        description: 'Rich chocolate cake perfect for birthday celebrations',
-        base_price: 899,
-        image_url: '/src/assets/hero-cake.jpg',
-        is_featured: true,
-        categories: { name: 'Birthday' }
-      },
-      {
-        id: '2',
-        name: 'Elegant Wedding Cake',
-        description: 'Three-tier vanilla wedding cake with rose decorations',
-        base_price: 2499,
-        image_url: '/src/assets/wedding-cake.jpg',
-        is_featured: true,
-        categories: { name: 'Wedding' }
-      },
-      {
-        id: '3',
-        name: 'Rainbow Layer Cake',
-        description: 'Colorful rainbow layers that bring joy to any celebration',
-        base_price: 1299,
-        image_url: '/src/assets/rainbow-cake.jpg',
-        is_featured: true,
-        categories: { name: 'Special' }
-      }
-    ];
-    setFeaturedCakes(mockCakes);
   };
 
   if (loading) {

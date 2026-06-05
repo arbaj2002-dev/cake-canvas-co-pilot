@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -6,44 +6,53 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Search, Grid, List, X } from "lucide-react";
 import Header from "@/components/Header";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { supabase } from "@/integrations/supabase/client";
 
-// Import our cake images
-import weddingCake from "@/assets/wedding-cake.jpg";
-import rainbowCake from "@/assets/rainbow-cake.jpg";
-import chocolateCake from "@/assets/chocolate-cake.jpg";
-import heroCake from "@/assets/hero-cake.jpg";
+interface GalleryImage {
+  id: string;
+  title: string;
+  image_url: string;
+  created_at: string;
+}
 
 const Gallery = () => {
+  const [images, setImages] = useState<GalleryImage[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
-  const galleryImages = [
-    { id: 1, url: heroCake, title: "Chocolate Birthday Delight", category: "Birthday", description: "Rich chocolate cake perfect for birthday celebrations" },
-    { id: 2, url: weddingCake, title: "Elegant Wedding Cake", category: "Wedding", description: "Three-tier vanilla wedding cake with rose decorations" },
-    { id: 3, url: rainbowCake, title: "Rainbow Layer Cake", category: "Special", description: "Colorful rainbow layers that bring joy to any celebration" },
-    { id: 4, url: chocolateCake, title: "Decadent Chocolate Fudge", category: "Chocolate", description: "Rich chocolate fudge cake with ganache and berries" },
-    { id: 5, url: heroCake, title: "Classic Vanilla Dream", category: "Birthday", description: "Fluffy vanilla sponge with buttercream frosting" },
-    { id: 6, url: weddingCake, title: "Rose Garden Wedding", category: "Wedding", description: "Elegant white cake with fresh roses" },
-    { id: 7, url: rainbowCake, title: "Unicorn Fantasy", category: "Special", description: "Magical unicorn-themed cake with edible glitter" },
-    { id: 8, url: chocolateCake, title: "Dark Chocolate Truffle", category: "Chocolate", description: "Intense dark chocolate with truffle filling" },
-  ];
+  useEffect(() => {
+    fetchImages();
+  }, []);
 
-  const filteredImages = galleryImages
-    .filter(image => 
-      image.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      image.description.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-    .filter(image => 
-      selectedCategory === "all" || 
-      image.category.toLowerCase() === selectedCategory.toLowerCase()
-    );
+  const fetchImages = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("gallery" as any)
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        console.error("Error fetching gallery images:", error);
+      } else {
+        setImages((data || []) as unknown as GalleryImage[]);
+      }
+    } catch (err) {
+      console.error("Error fetching gallery images:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredImages = images.filter((image) =>
+    image.title.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <div className="min-h-screen bg-gradient-hero">
       <Header />
-      
+
       <div className="container mx-auto px-4 py-8">
         {/* Page Header */}
         <div className="text-center mb-12">
@@ -70,24 +79,8 @@ const Gallery = () => {
               </div>
             </div>
 
-            {/* Category */}
-            <div>
-              <label className="text-sm font-medium text-foreground mb-2 block">Category</label>
-              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All Categories" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Categories</SelectItem>
-                  <SelectItem value="birthday">Birthday</SelectItem>
-                  <SelectItem value="wedding">Wedding</SelectItem>
-                  <SelectItem value="special">Special</SelectItem>
-                  <SelectItem value="chocolate">Chocolate</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div></div>
+            <div />
+            <div />
 
             {/* View Mode */}
             <div className="flex space-x-2">
@@ -113,66 +106,59 @@ const Gallery = () => {
 
         {/* Results Count */}
         <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center space-x-2">
-            <Badge variant="secondary" className="text-foreground">
-              {filteredImages.length} images found
-            </Badge>
-            {selectedCategory !== "all" && (
-              <Badge variant="outline">
-                Category: {selectedCategory}
-              </Badge>
-            )}
+          <Badge variant="secondary" className="text-foreground">
+            {filteredImages.length} images found
+          </Badge>
+        </div>
+
+        {/* Loading */}
+        {loading ? (
+          <div className="flex items-center justify-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
           </div>
-        </div>
-
-        {/* Gallery Grid */}
-        <div className={`grid gap-4 ${
-          viewMode === "grid" 
-            ? "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4" 
-            : "grid-cols-1 md:grid-cols-2"
-        }`}>
-          {filteredImages.map((image) => (
-            <div 
-              key={image.id} 
-              className="group cursor-pointer bg-card rounded-2xl overflow-hidden shadow-card hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
-              onClick={() => setSelectedImage(image.url)}
-            >
-              <div className="relative overflow-hidden">
-                <img 
-                  src={image.url} 
-                  alt={image.title}
-                  className="w-full h-64 object-cover group-hover:scale-105 transition-smooth"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-smooth" />
-                <Badge className="absolute top-3 left-3 bg-accent text-accent-foreground">
-                  {image.category}
-                </Badge>
-              </div>
-              
-              {viewMode === "list" && (
-                <div className="p-4">
-                  <h3 className="font-semibold text-lg text-foreground mb-2">{image.title}</h3>
-                  <p className="text-sm text-muted-foreground">{image.description}</p>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-
-        {/* No Results */}
-        {filteredImages.length === 0 && (
+        ) : filteredImages.length === 0 ? (
           <div className="text-center py-16">
             <div className="text-6xl mb-4">🖼️</div>
             <h3 className="text-2xl font-semibold text-foreground mb-2">No images found</h3>
             <p className="text-muted-foreground mb-6">
-              Try adjusting your search criteria or browse all our gallery
+              {searchTerm
+                ? "Try adjusting your search criteria."
+                : "No gallery images have been added yet."}
             </p>
-            <Button onClick={() => {
-              setSearchTerm("");
-              setSelectedCategory("all");
-            }}>
-              Clear Filters
-            </Button>
+            {searchTerm && (
+              <Button onClick={() => setSearchTerm("")}>Clear Search</Button>
+            )}
+          </div>
+        ) : (
+          <div
+            className={`grid gap-4 ${
+              viewMode === "grid"
+                ? "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4"
+                : "grid-cols-1 md:grid-cols-2"
+            }`}
+          >
+            {filteredImages.map((image) => (
+              <div
+                key={image.id}
+                className="group cursor-pointer bg-card rounded-2xl overflow-hidden shadow-card hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
+                onClick={() => setSelectedImage(image.image_url)}
+              >
+                <div className="relative overflow-hidden">
+                  <img
+                    src={image.image_url}
+                    alt={image.title}
+                    className="w-full h-64 object-cover group-hover:scale-105 transition-smooth"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-smooth" />
+                </div>
+
+                {viewMode === "list" && (
+                  <div className="p-4">
+                    <h3 className="font-semibold text-lg text-foreground">{image.title}</h3>
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         )}
 
@@ -189,8 +175,8 @@ const Gallery = () => {
                 <X className="h-4 w-4" />
               </Button>
               {selectedImage && (
-                <img 
-                  src={selectedImage} 
+                <img
+                  src={selectedImage}
                   alt="Gallery preview"
                   className="w-full max-h-[80vh] object-contain rounded-lg"
                 />
