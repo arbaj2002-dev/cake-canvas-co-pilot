@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -30,7 +31,8 @@ const Cakes = () => {
   const [cakes, setCakes] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchParams] = useSearchParams();
+  const [searchTerm, setSearchTerm] = useState(searchParams.get("search") ?? "");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [priceRange, setPriceRange] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("name");
@@ -40,6 +42,10 @@ const Cakes = () => {
     fetchCakes();
     fetchCategories();
   }, [])
+
+  useEffect(() => {
+    setSearchTerm(searchParams.get("search") ?? "");
+  }, [searchParams])
 
   const fetchCategories = async () => {
     try {

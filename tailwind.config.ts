@@ -5,6 +5,10 @@ export default {
   content: ["./pages/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./app/**/*.{ts,tsx}", "./src/**/*.{ts,tsx}"],
   prefix: "",
   theme: {
+    fontFamily: {
+      sans: ["Inter", "system-ui", "-apple-system", "sans-serif"],
+      display: ["Fraunces", "Georgia", "serif"],
+    },
     container: {
       center: true,
       padding: "2rem",
@@ -80,6 +84,22 @@ export default {
         sm: "calc(var(--radius) - 4px)",
       },
       keyframes: {
+        "fade-up": {
+          from: { opacity: "0", transform: "translateY(24px)" },
+          to: { opacity: "1", transform: "translateY(0)" },
+        },
+        "float": {
+          "0%, 100%": { transform: "translateY(0)" },
+          "50%": { transform: "translateY(-12px)" },
+        },
+        "spin-slow": {
+          from: { transform: "rotate(0deg)" },
+          to: { transform: "rotate(360deg)" },
+        },
+        "marquee": {
+          from: { transform: "translateX(0)" },
+          to: { transform: "translateX(-50%)" },
+        },
         "accordion-down": {
           from: {
             height: "0",
@@ -98,6 +118,10 @@ export default {
         },
       },
       animation: {
+        "fade-up": "fade-up 0.8s cubic-bezier(0.22, 1, 0.36, 1) both",
+        "float": "float 5s ease-in-out infinite",
+        "spin-slow": "spin-slow 18s linear infinite",
+        "marquee": "marquee 28s linear infinite",
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
       },
