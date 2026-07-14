@@ -1,10 +1,11 @@
 import Header from "@/components/Header";
-import HeroSection from "@/components/HeroSection";
-import FeaturesSection from "@/components/home/FeaturesSection";
-import CategorySection from "@/components/home/CategorySection";
-import FeaturedCakes from "@/pages/FeaturedCakes";
+import PromoBannerCarousel from "@/components/home/PromoBannerCarousel";
+import QuickCategories from "@/components/home/QuickCategories";
+import BestsellersSection from "@/components/home/BestsellersSection";
+import CustomCakeSection from "@/components/home/CustomCakeSection";
+import TrustStrip from "@/components/home/TrustStrip";
 import TestimonialsSection from "@/components/home/TestimonialsSection";
-import NewsletterSection from "@/components/home/NewsletterSection";
+import FinalCTASection from "@/components/home/FinalCTASection";
 import Footer from "@/components/Footer";
 
 const Index = () => {
@@ -12,12 +13,13 @@ const Index = () => {
     <div className="min-h-screen bg-gradient-hero flex flex-col">
       <Header />
       <main className="flex-1">
-        <HeroSection />
-        <CategorySection />
-        <FeaturedCakes />
-        <FeaturesSection />
+        <PromoBannerCarousel />
+        <QuickCategories />
+        <BestsellersSection />
+        <TrustStrip />
+        <CustomCakeSection />
         <TestimonialsSection />
-        <NewsletterSection />
+        <FinalCTASection />
       </main>
       <Footer />
     </div>
